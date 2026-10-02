@@ -1,0 +1,14 @@
+NODE_ENV=development
+# Overrides api.port from erxes.json.
+# PORT=
+REDIS_HOST=localhost
+REDIS_PORT=6379
+# REDIS_PASSWORD=
+# Recorded for core plugins that read it; this plugin owns no database.
+# MONGO_URL=mongodb://localhost:27017/erxes
+# Where the browser loads the UI remote from. Unset = plugins.erxes.io/<release>/__name___ui/.
+UI_ENTRY_URL=http://localhost:__uiPort__/remoteEntry.js
+# Address the gateway uses to reach this API. Unset = localhost (dev) or plugin-__name__-api (prod).
+# LOAD_BALANCER_ADDRESS=
+# Release folder on plugins.erxes.io when it starts with "3."; otherwise "latest".
+# RELEASE_VERSION=
