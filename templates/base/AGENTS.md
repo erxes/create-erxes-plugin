@@ -2,9 +2,9 @@
 
 __description__
 
-An erxes plugin outside the erxes monorepo: `api/` (__runtime__, Express 5,
-Apollo federated subgraph) and `ui/` (React 18 Module Federation remote).
-`erxes.json` is the single source of the plugin's identity and ports.
+An erxes plugin outside the erxes monorepo: `api/` (__runtime__,
+__backendHint__) and `ui/` (React 18 Module Federation remote). `erxes.json`
+is the single source of the plugin's identity and ports.
 
 ## Commands
 
@@ -27,22 +27,28 @@ See `docs/erxes-integration.md`. In short:
 
 ## Contracts
 
-- `api/src/gateway.ts` mirrors erxes-api-shared `joinErxesGateway`: same Redis
-  keys, same config JSON shape, and in production the router-update lock plus
-  the BullMQ `gateway-update-apollo-router` job. Do not drop the job.
-- `api/src/context.ts` is the only place that reads gateway headers (`user`,
-  `hostname`/`nginx-hostname`). Resolvers receive `{ subdomain, user }`.
+__apiContracts__
 - Prefix every GraphQL type with `__Pascal__` and every operation and root
   field with `__camel__`; the supergraph is shared by all plugins.
 - `ui/src/config.tsx` exports `CONFIG`; `ui/src/Main.tsx` exports `__Pascal__`.
   Keep both expose names in `ui/rspack.config.ts` in sync with `erxes.json`.
+- `erxes-ui`, `ui-modules` and `erxes-api-shared` are consumed as git
+  dependencies on the erxes monorepo at ref `__erxesRef__`; pin that ref to
+  the commit your erxes deployment runs.
 
 ## Rules
 
 - No `any`; named exports (default export only where a tool requires it, e.g.
   `rspack.config.ts`).
-- `react`, `react-dom`, `react-router`, `@apollo/client` stay `ui`
-  devDependencies and `import: false` shared singletons: the host provides them.
+- The `hostShared` list in `ui/rspack.config.ts` (`react`, `react-dom`,
+  `react-router`, `react-router-dom`, `@apollo/client`, `jotai`,
+  `react-i18next`, `erxes-ui`, `ui-modules`) mirrors core-ui's shared
+  singletons: they stay `import: false` and are never bundled — the host
+  provides them at runtime. Keep the list in sync with core-ui's
+  `coreLibraries`.
+- `erxes-ui`/`ui-modules` imports resolve to the shared singleton at runtime,
+  so their versions must match the host — that is why the deps pin to
+  `__erxesRef__`.
 - UI classes use the `__twPrefix__:` Tailwind prefix and the host tokens
   (`bg-background`, `text-muted-foreground`, `border-border`, …).
 - Authorize in the API using `context.user`; the UI route guard is not a

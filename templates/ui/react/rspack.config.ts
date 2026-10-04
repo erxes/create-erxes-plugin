@@ -4,9 +4,20 @@ import manifest from "../erxes.json" with { type: "json" };
 
 const { name, remote, port } = manifest.ui;
 
-// erxes core-ui owns these. The remote never bundles its own copy, so hooks
-// and context (ApolloProvider, Router) resolve to the host's instances.
-const hostShared = ["react", "react-dom", "react-router", "@apollo/client"];
+// erxes core-ui owns these (its `coreLibraries` shared set). The remote never
+// bundles its own copy, so hooks, context (ApolloProvider, Router, Jotai,
+// i18n) and the design system all resolve to the host's instances.
+const hostShared = [
+  "react",
+  "react-dom",
+  "react-router",
+  "react-router-dom",
+  "@apollo/client",
+  "jotai",
+  "react-i18next",
+  "erxes-ui",
+  "ui-modules",
+];
 
 export default defineConfig({
   entry: {},

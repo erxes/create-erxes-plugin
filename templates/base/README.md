@@ -7,9 +7,15 @@ without erxes source changes.
 
 | Part   | Path         | Stack                                                    | Dev port    |
 | ------ | ------------ | -------------------------------------------------------- | ----------- |
-| API    | `api`        | __runtime__, Express 5, Apollo Server federated subgraph | __apiPort__ |
+| API    | `api`        | __runtime__, __backendHint__                             | __apiPort__ |
 | UI     | `ui`         | React 18 Module Federation remote (Rspack), Tailwind CSS | __uiPort__  |
 | Shared | `erxes.json` | Plugin identity and ports read by both parts             |             |
+
+The UI consumes the monorepo's `erxes-ui`/`ui-modules` design system as a git
+dependency on `erxes/erxes@__erxesRef__` (see
+[docs/erxes-integration.md](docs/erxes-integration.md#shared-libraries)). The
+host supplies them at runtime via Module Federation singletons — they are
+installed only so TypeScript and Rspack can resolve the imports.
 
 ## Develop
 
