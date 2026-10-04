@@ -7,13 +7,13 @@ export type Runtime = "node" | "bun";
 export const runtimeFor = (packageManager: PackageManager): Runtime =>
   packageManager === "bun" ? "bun" : "node";
 
-type RuntimeSetup = {
+export type RuntimeSetup = {
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
   types: string[];
 };
 
-type BackendStack = {
+export type BackendStack = {
   label: string;
   hint: string;
   /** Template directory under `templates/`, copied to `api/`. */
@@ -45,6 +45,23 @@ export const BACKENDS = {
         },
         devDependencies: { "@types/bun": "^1.4.2" },
         types: ["bun"],
+      },
+    },
+  },
+  platform: {
+    label: "erxes platform",
+    hint: "erxes-api-shared startPlugin + tenant-scoped Mongoose models (Node.js)",
+    template: "api/platform",
+    runtimes: {
+      node: {
+        scripts: {
+          dev: "tsx watch --env-file-if-exists=.env src/main.ts",
+          build: "tsc -p tsconfig.build.json",
+          start: "node --env-file-if-exists=.env dist/main.js",
+          check: "tsc --noEmit",
+        },
+        devDependencies: { "@types/node": "^22.18.0", tsx: "^4.23.15" },
+        types: ["node"],
       },
     },
   },

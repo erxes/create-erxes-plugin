@@ -1,0 +1,17 @@
+{
+  "name": "__name___api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "erxes-api-shared": "__erxesApiSharedDep__",
+    "graphql": "^16.14.2",
+    "graphql-tag": "^2.12.7",
+    "mongoose": "^8.10.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.3"
+  }
+}

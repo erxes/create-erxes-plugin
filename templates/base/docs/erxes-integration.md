@@ -17,37 +17,9 @@ All of these come from `erxes.json`. They must stay consistent.
 
 ## API registration
 
-On start, `api/src/gateway.ts` writes what erxes-api-shared `joinErxesGateway`
-writes:
-
-- `erxesservice:config:__name__`: `{ dbConnectionString, hasSubscriptions, meta, releaseVersion, uiEntry }`.
-  `uiEntry` is `UI_ENTRY_URL`; `releaseVersion` is `RELEASE_VERSION` when it
-  starts with `3.`, otherwise `latest`.
-- `erxes-service-__name__`: the address the gateway proxies to.
-  `LOAD_BALANCER_ADDRESS`, else `http://localhost:<port>` in development and
-  `http://plugin-__name__-api:<port>` otherwise.
-- In production only: the `gateway:update-apollo-router:pending` lock (30 s)
-  and a BullMQ job `service-discovery-updated` on queue
-  `gateway-update-apollo-router`. Without it a production gateway never
-  recomposes the supergraph.
+__apiRegistration__
 
 The gateway only composes plugins listed in its `ENABLED_PLUGINS`.
-
-## Requests
-
-The gateway forwards every request with:
-
-- `user`: base64 JSON of the signed-in user (`_id`, `email`, …), absent for
-  anonymous requests.
-- `hostname` (or `nginx-hostname` behind nginx): the erxes host. Its first
-  label is the tenant `subdomain`.
-
-`api/src/context.ts` turns both into the GraphQL context. A malformed `user`
-header is treated as anonymous.
-
-The API serves `GET /health` and a federated subgraph at `/graphql`
-(Federation v2). Every type and operation carries the plugin prefix because
-all plugins share one supergraph.
 
 ## UI loading
 
@@ -57,13 +29,53 @@ all plugins share one supergraph.
 2. core-ui loads `__remote__/config` and reads the exported `CONFIG`.
 3. core-ui routes `/<CONFIG.path>/*` to `__remote__/<CONFIG.name>` and renders
    its default export or the export named in PascalCase (`__Pascal__`).
-4. `react`, `react-dom`, `react-router` and `@apollo/client` are the host's
-   singletons, so the page runs inside core-ui's router and ApolloProvider
-   with the user's auth cookie. The remote never bundles them.
+4. The `hostShared` list in `ui/rspack.config.ts` — `react`, `react-dom`,
+   `react-router`, `react-router-dom`, `@apollo/client`, `jotai`,
+   `react-i18next`, `erxes-ui` and `ui-modules` — mirrors core-ui's
+   `coreLibraries` singletons, so the page runs inside core-ui's router,
+   ApolloProvider, i18n and design system with the user's auth cookie. The
+   remote never bundles them.
 
 core-ui in development also registers remotes it gets from
-`/get-frontend-plugins`, so `pnpm dev:ui` in erxes plus `__pmRun__ dev:ui` here
-is enough.
+`/get-frontend-plugins`, so `pnpm dev:uis` in erxes plus `__pmRun__ dev:ui`
+here is enough.
+
+## Shared libraries
+
+`erxes-ui`, `ui-modules` and `erxes-api-shared` live inside the erxes monorepo
+and are not on npm. This repo consumes them as git dependencies on monorepo
+subdirectories:
+
+```jsonc
+// ui/package.json
+"erxes-ui":   "__erxesUiDep__",
+"ui-modules": "__erxesUiModulesDep__"
+```
+
+```jsonc
+// api/package.json (platform stack)
+"erxes-api-shared": "__erxesApiSharedDep__"
+```
+
+Notes:
+
+- The `#__erxesRef__` ref is what your plugin compiles and type-checks
+  against. Pin it to the commit your erxes deployment runs — the host provides
+  `erxes-ui`/`ui-modules` as Module Federation singletons at runtime, so a
+  type/runtime mismatch surfaces as broken imports, not as a helpful error.
+- pnpm resolves `&path:` monorepo subdirectories in git deps. The other
+  package managers get a `file:../erxes/...` fallback instead — adjust the
+  path if your erxes clone does not sit next to this repo. `file:` specs do
+  not run `prepare`, so run `pnpm install` in the erxes clone once first —
+  its workspace install builds each library's `dist/` declarations and
+  bundles.
+- `erxes-api-shared` runs its `prepare` (preconstruct build) on install, which
+  is what produces its `dist/` bundles; `erxes-ui` and `ui-modules` emit
+  `dist/` type declarations the same way. With `dist/` present, `tsc`
+  type-checks the plugin against declarations only — the libraries' own
+  source is never re-checked against this repo's dependency versions.
+- When erxes publishes these libraries to npm, swap the git/file specifiers
+  for version ranges and nothing else changes.
 
 ## Styling
 
@@ -71,7 +83,8 @@ core-ui ships Tailwind preflight and unprefixed utilities for its own code.
 This remote compiles its own utilities with the `__twPrefix__:` prefix
 (`ui/src/styles.css`), mapped to the host's design tokens (`--background`,
 `--muted-foreground`, …). The prefix keeps the plugin's CSS from overriding
-the host or other plugins.
+the host or other plugins. `erxes-ui` components come pre-styled by the host's
+own CSS — no extra setup needed.
 
 ## Permissions
 

@@ -1,4 +1,8 @@
 import { useQuery } from "@apollo/client";
+// Root import on purpose: core-ui shares `erxes-ui` as a Module Federation
+// singleton keyed on the bare specifier, so deep imports would bundle a second
+// private copy instead of reusing the host's.
+import { Button } from "erxes-ui";
 import manifest from "../../../erxes.json" with { type: "json" };
 import { STATUS_QUERY, type StatusQuery } from "../graphql";
 
@@ -31,13 +35,10 @@ export const StatusPage = () => {
         {error && (
           <div className="__twPrefix__:flex __twPrefix__:flex-col __twPrefix__:items-start __twPrefix__:gap-2">
             <p className="__twPrefix__:text-sm __twPrefix__:text-destructive">{error.message}</p>
-            <button
-              type="button"
-              className="__twPrefix__:rounded-md __twPrefix__:border __twPrefix__:border-border __twPrefix__:px-3 __twPrefix__:py-1 __twPrefix__:text-sm __twPrefix__:hover:bg-accent"
-              onClick={() => refetch()}
-            >
+            {/* Host-singleton erxes-ui component: styles and code come from core-ui. */}
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
               Retry
-            </button>
+            </Button>
           </div>
         )}
         {status && (

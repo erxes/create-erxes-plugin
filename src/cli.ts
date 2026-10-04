@@ -4,7 +4,7 @@ import * as p from "@clack/prompts";
 import { Command, Option } from "commander";
 import { getUserAgent } from "package-manager-detector/detect";
 import { x } from "tinyexec";
-import type { ProjectOptions } from "./generated.ts";
+import { type ProjectOptions, runtimesFor } from "./generated.ts";
 import { derivePluginNames, validatePluginName } from "./naming.ts";
 import { scaffold } from "./scaffold.ts";
 import {
@@ -14,6 +14,7 @@ import {
   isPackageManager,
   PACKAGE_MANAGERS,
   type PackageManager,
+  runtimeFor,
 } from "./stacks.ts";
 
 const DEFAULT_API_PORT = 3399;
@@ -27,6 +28,7 @@ type CliOptions = {
   pm?: string;
   apiPort?: string;
   uiPort?: string;
+  erxesRef?: string;
   install: boolean;
   git: boolean;
   yes?: boolean;
@@ -174,6 +176,8 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
   const backend = await askBackend(cli);
   p.log.info(`Backend: ${BACKENDS[backend].label} · Frontend: React`);
   const packageManager = await askPackageManager(cli);
+  if (!runtimesFor({ backend })[runtimeFor(packageManager)])
+    fail(`${BACKENDS[backend].label} requires Node.js — bun is not supported for this stack.`);
   const apiPort = await askPort("API dev port", cli.apiPort, DEFAULT_API_PORT, cli.yes);
   const uiPort = await askPort("UI dev port", cli.uiPort, DEFAULT_UI_PORT, cli.yes);
   if (apiPort === uiPort) fail("API and UI ports must differ.");
@@ -192,6 +196,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
       packageManager === "npm" ? undefined : await packageManagerVersion(packageManager),
     apiPort,
     uiPort,
+    erxesRef: cli.erxesRef,
   };
 
   const spin = p.spinner();
@@ -248,6 +253,10 @@ export const runCli = async (argv: string[]) => {
     .addOption(new Option("--pm <manager>", "package manager").choices([...PACKAGE_MANAGERS]))
     .option("--api-port <port>", `API dev port (default ${DEFAULT_API_PORT})`)
     .option("--ui-port <port>", `UI dev server port (default ${DEFAULT_UI_PORT})`)
+    .option(
+      "--erxes-ref <ref>",
+      "git ref of erxes/erxes for shared-library deps: branch, tag or sha (default main)",
+    )
     .option("--no-install", "skip installing dependencies")
     .option("--no-git", "skip git init")
     .option("-y, --yes", "accept defaults for every unanswered question")
