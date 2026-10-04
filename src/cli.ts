@@ -7,6 +7,7 @@ import { x } from "tinyexec";
 import { type ProjectOptions, runtimesFor } from "./generated.ts";
 import { derivePluginNames, validatePluginName } from "./naming.ts";
 import { scaffold } from "./scaffold.ts";
+import { VERSION } from "./templates.generated.ts";
 import {
   BACKENDS,
   type Backend,
@@ -242,6 +243,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
 
 export const runCli = async (argv: string[]) => {
   const program = new Command("create-erxes-plugin")
+    .version(VERSION)
     .description("Create a standalone erxes plugin repository")
     .argument("[directory]", "target directory (defaults to the plugin name)")
     .option("-n, --name <name>", "plugin name, e.g. inventory or erxes-agent-v2")

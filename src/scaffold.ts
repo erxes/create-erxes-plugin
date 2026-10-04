@@ -1,6 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import {
   createDockerfile,
   createManifest,
@@ -10,8 +9,7 @@ import {
   runtimesFor,
 } from "./generated.ts";
 import { BACKENDS, type Backend, FRONTENDS, runtimeFor } from "./stacks.ts";
-
-const TEMPLATES_DIR = fileURLToPath(new URL("../templates/", import.meta.url));
+import { TEMPLATES } from "./templates.generated.ts";
 
 // npm strips dotfiles like .gitignore from published packages, so templates
 // store them with a leading underscore.
@@ -133,17 +131,15 @@ carries the plugin prefix because all plugins share one supergraph.`,
 
 /** Copies a template layer into `targetDir`, renaming dotfiles and filling tokens. */
 const copyLayer = async (layer: string, targetDir: string, tokens: [string, string][]) => {
-  const sourceDir = join(TEMPLATES_DIR, layer);
+  for (const [key, content] of Object.entries(TEMPLATES)) {
+    if (!key.startsWith(`${layer}/`)) continue;
 
-  for (const entry of await readdir(sourceDir, { recursive: true, withFileTypes: true })) {
-    if (!entry.isFile()) continue;
+    const rel = key.slice(layer.length + 1);
+    const fileName = DOTFILES[basename(rel)] ?? applyTokens(basename(rel), tokens);
+    const path = join(targetDir, dirname(rel), fileName);
 
-    const dir = join(targetDir, relative(sourceDir, entry.parentPath));
-    const fileName = DOTFILES[entry.name] ?? applyTokens(entry.name, tokens);
-    const content = await readFile(join(entry.parentPath, entry.name), "utf8");
-
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, fileName), applyTokens(content, tokens));
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, applyTokens(content, tokens));
   }
 };
 
