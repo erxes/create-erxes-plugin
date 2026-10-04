@@ -8,18 +8,19 @@
     "create-erxes-plugin": "dist/index.js"
   },
   "files": [
-    "dist",
-    "templates"
+    "dist"
   ],
   "engines": {
     "node": ">=20.12"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx src/index.ts",
-    "check": "tsc --noEmit",
-    "test": "tsx --test test/*.test.ts",
-    "lint": "oxlint src test",
+    "build": "pnpm templates && tsc -p tsconfig.build.json",
+    "dev": "pnpm templates && tsx src/index.ts",
+    "check": "pnpm templates && tsc --noEmit",
+    "test": "pnpm templates && tsx --test test/*.test.ts",
+    "templates": "tsx scripts/embed-templates.ts",
+    "compile": "tsx scripts/compile.ts",
+    "lint": "oxlint src test scripts",
     "fmt": "oxfmt src test",
     "prepublishOnly": "npm run build"
   },

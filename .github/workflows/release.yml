@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.x"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(node -p "require('./package.json').version")
+          [ "${GITHUB_REF_NAME}" = "v${version}" ] || {
+            echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${version}" >&2
+            exit 1
+          }
+
+      - run: pnpm check && pnpm lint && pnpm test
+
+      - run: pnpm compile
+
+      - name: Package archives
+        run: |
+          mkdir -p dist/release
+          for target in linux-x64 linux-arm64 linux-x64-musl linux-arm64-musl darwin-x64 darwin-arm64; do
+            tar -czf "dist/release/create-erxes-plugin-${target}.tar.gz" \
+              -C "dist/bin/${target}" create-erxes-plugin
+          done
+          zip -j dist/release/create-erxes-plugin-windows-x64.zip \
+            dist/bin/windows-x64/create-erxes-plugin.exe
+          cd dist/release
+          sha256sum create-erxes-plugin-* > SHA256SUMS
+          cat SHA256SUMS
+
+      # workflow_dispatch runs everything above but only tag pushes publish.
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/release/*
+          generate_release_notes: true

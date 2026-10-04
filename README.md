@@ -3,6 +3,39 @@
 Scaffold a standalone erxes plugin repository: an API that registers itself
 with the erxes gateway and a React Module Federation remote that core-ui loads.
 
+## Install
+
+The CLI ships as a standalone binary — no Node.js is needed to run it (the
+generated plugin itself still needs Node.js/pnpm for development).
+
+macOS / Linux:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/erxes/create-erxes-plugin/main/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/erxes/create-erxes-plugin/main/install.ps1 | iex
+```
+
+Pin a release or choose the install directory:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/erxes/create-erxes-plugin/main/install.sh | sh -s -- --version 0.2.0 --dir ~/bin
+```
+
+`--version`/`CREATE_ERXES_PLUGIN_VERSION` and `--dir`/`CREATE_ERXES_PLUGIN_INSTALL_DIR`
+are equivalent. The installer picks `/usr/local/bin` when writable, otherwise
+`~/.local/bin`; on Windows it uses `%LOCALAPPDATA%\Programs\create-erxes-plugin`
+and adds it to the user PATH. Release assets are
+`create-erxes-plugin-<os>-<arch>.tar.gz` (`-musl` suffixed for Alpine and
+friends) and `create-erxes-plugin-windows-x64.zip`, verified against the
+release's `SHA256SUMS`. `create-erxes-plugin --version` prints the version.
+
+Or via a package manager (requires Node.js ≥ 20.12):
+
 ```sh
 npx create-erxes-plugin inventory
 # or
@@ -53,6 +86,9 @@ templates/base    root files
 templates/api/shared   framework-neutral API files (config, gateway registration)
 templates/api/<backend>
 templates/ui/react
+scripts/embed-templates.ts   embeds templates/ into src/templates.generated.ts
+scripts/compile.ts           bun --compile per-target binaries into dist/bin/
+install.sh / install.ps1     standalone-binary installers
 ```
 
 Dotfiles are stored as `_gitignore`, `_dockerignore`, `_env.example` because
@@ -74,4 +110,12 @@ pnpm dev my-plugin --pm pnpm      # run the CLI from source
 pnpm test                         # scaffolds every package manager into a temp dir
 pnpm check && pnpm lint
 pnpm build                        # dist/ for publishing
+pnpm compile darwin-arm64         # standalone binary in dist/bin/<target>/
 ```
+
+### Releasing
+
+Push a `vX.Y.Z` tag: `.github/workflows/release.yml` compiles every target,
+packs `dist/release/` archives plus `SHA256SUMS`, and publishes a GitHub
+release. A `workflow_dispatch` run exercises the same pipeline without
+publishing.
