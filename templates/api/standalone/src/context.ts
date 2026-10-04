@@ -1,4 +1,3 @@
-import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
 
 // The gateway forwards the signed-in user as base64 JSON in the `user` header
@@ -21,6 +20,9 @@ export type Context = {
   user: ErxesUser | null;
 };
 
+/** Fetch `Headers` (Hono, Elysia, Yoga) or Node's plain-object headers. */
+export type HeaderSource = Headers | Record<string, string | string[] | undefined>;
+
 const single = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 const parseUser = (header: string | undefined): ErxesUser | null => {
@@ -35,9 +37,13 @@ const parseUser = (header: string | undefined): ErxesUser | null => {
 
 const parseSubdomain = (host: string) => host.replace(/^\w+:\/\//, "").split(/[.:]/)[0] ?? "";
 
-export const createContext = (headers: IncomingHttpHeaders): Context => ({
-  subdomain: parseSubdomain(
-    single(headers["nginx-hostname"]) ?? single(headers.hostname) ?? single(headers.host) ?? "",
-  ),
-  user: parseUser(single(headers.user)),
-});
+export const createContext = (headers: HeaderSource): Context => {
+  const read = (name: string) =>
+    headers instanceof Headers ? (headers.get(name) ?? undefined) : single(headers[name]);
+  return {
+    subdomain: parseSubdomain(
+      read("nginx-hostname") ?? read("hostname") ?? read("host") ?? "",
+    ),
+    user: parseUser(read("user")),
+  };
+};

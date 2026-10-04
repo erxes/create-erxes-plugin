@@ -2,15 +2,19 @@
   "name": "__name___api",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
-    "erxes-api-shared": "__erxesApiSharedDep__",
+    "@apollo/subgraph": "^2.15.1",
+    "@hono/node-server": "^2.1.3",
+    "bullmq": "^5.81.5",
     "graphql": "^16.14.2",
     "graphql-tag": "^2.12.7",
-    "mongoose": "^8.10.0",
+    "graphql-yoga": "^5.24.1",
+    "hono": "^4.13.13",
+    "ioredis": "^5.11.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^22.18.0",
     "typescript": "^5.9.3"
   }
 }

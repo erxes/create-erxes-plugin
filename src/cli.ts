@@ -11,6 +11,9 @@ import { VERSION } from "./templates.generated.ts";
 import {
   BACKENDS,
   type Backend,
+  DEFAULT_BACKEND,
+  INTEGRATIONS,
+  type Integration,
   isBackend,
   isPackageManager,
   PACKAGE_MANAGERS,
@@ -123,13 +126,29 @@ const askBackend = async (cli: CliOptions): Promise<Backend> => {
   if (cli.backend)
     return isBackend(cli.backend) ? cli.backend : fail(`Unknown backend "${cli.backend}".`);
 
-  const backends = Object.entries(BACKENDS) as [Backend, (typeof BACKENDS)[Backend]][];
-  if (cli.yes || backends.length === 1) return backends[0]![0];
+  if (cli.yes) return DEFAULT_BACKEND;
 
+  const integration = unwrap(
+    await p.select<Integration>({
+      message: "erxes integration",
+      initialValue: "platform",
+      options: Object.entries(INTEGRATIONS).map(([value, { label, hint }]) => ({
+        value: value as Integration,
+        label,
+        hint,
+      })),
+    }),
+  );
+  if (integration === "platform") return "platform";
+
+  const frameworks = Object.entries(BACKENDS).filter(
+    (entry): entry is [Backend, (typeof BACKENDS)[Backend]] =>
+      entry[1].integration === "standalone",
+  );
   return unwrap(
     await p.select<Backend>({
       message: "Backend framework",
-      options: backends.map(([value, { label, hint }]) => ({ value, label, hint })),
+      options: frameworks.map(([value, { label, hint }]) => ({ value, label, hint })),
     }),
   );
 };
@@ -175,10 +194,17 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     cli.yes,
   );
   const backend = await askBackend(cli);
-  p.log.info(`Backend: ${BACKENDS[backend].label} · Frontend: React`);
+  const stack = BACKENDS[backend];
+  p.log.info(
+    `Backend: ${stack.label}${stack.integration === "standalone" ? " (standalone)" : ""} · Frontend: React`,
+  );
   const packageManager = await askPackageManager(cli);
-  if (!runtimesFor({ backend })[runtimeFor(packageManager)])
-    fail(`${BACKENDS[backend].label} requires Node.js — bun is not supported for this stack.`);
+  const runtime = runtimeFor(packageManager);
+  const setups = runtimesFor({ backend });
+  if (!setups[runtime])
+    fail(
+      `${stack.label} runs on ${Object.keys(setups).join(" or ")} — the ${runtime} runtime (package manager ${packageManager}) is not supported for this stack.`,
+    );
   const apiPort = await askPort("API dev port", cli.apiPort, DEFAULT_API_PORT, cli.yes);
   const uiPort = await askPort("UI dev port", cli.uiPort, DEFAULT_UI_PORT, cli.yes);
   if (apiPort === uiPort) fail("API and UI ports must differ.");
@@ -250,7 +276,10 @@ export const runCli = async (argv: string[]) => {
     .option("-t, --title <title>", "display name shown in erxes navigation")
     .option("-d, --description <text>", "one-line description")
     .addOption(
-      new Option("-b, --backend <backend>", "backend framework").choices(Object.keys(BACKENDS)),
+      new Option(
+        "-b, --backend <backend>",
+        "backend stack: platform (erxes-api-shared) or a standalone framework",
+      ).choices(Object.keys(BACKENDS)),
     )
     .addOption(new Option("--pm <manager>", "package manager").choices([...PACKAGE_MANAGERS]))
     .option("--api-port <port>", `API dev port (default ${DEFAULT_API_PORT})`)

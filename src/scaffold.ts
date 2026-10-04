@@ -8,7 +8,7 @@ import {
   type ProjectOptions,
   runtimesFor,
 } from "./generated.ts";
-import { BACKENDS, type Backend, FRONTENDS, runtimeFor } from "./stacks.ts";
+import { BACKENDS, FRONTENDS, type Integration, runtimeFor } from "./stacks.ts";
 import { TEMPLATES } from "./templates.generated.ts";
 
 // npm strips dotfiles like .gitignore from published packages, so templates
@@ -64,9 +64,10 @@ const tokensFor = ({
   // The prose blocks embed the same placeholders (e.g. `__name__` inside
   // "erxes-service-__name__"); fill them with the already-built token map so
   // nothing survives into the generated files.
+  const integration = BACKENDS[backend].integration;
   tokens.push(
-    ["__apiContracts__", applyTokens(API_CONTRACTS[backend], tokens)],
-    ["__apiRegistration__", applyTokens(API_REGISTRATION[backend], tokens)],
+    ["__apiContracts__", applyTokens(API_CONTRACTS[integration], tokens)],
+    ["__apiRegistration__", applyTokens(API_REGISTRATION[integration], tokens)],
   );
 
   return tokens;
@@ -74,8 +75,8 @@ const tokensFor = ({
 
 // Stack-specific prose for the generated AGENTS.md contract bullets and the
 // API registration section of docs/erxes-integration.md.
-const API_CONTRACTS: Record<Backend, string> = {
-  express: `- \`api/src/gateway.ts\` mirrors erxes-api-shared \`joinErxesGateway\`: same Redis
+const API_CONTRACTS: Record<Integration, string> = {
+  standalone: `- \`api/src/gateway.ts\` mirrors erxes-api-shared \`joinErxesGateway\`: same Redis
   keys, same config JSON shape, and in production the router-update lock plus
   the BullMQ \`gateway-update-apollo-router\` job. Do not drop the job.
 - \`api/src/context.ts\` is the only place that reads gateway headers (\`user\`,
@@ -87,8 +88,8 @@ const API_CONTRACTS: Record<Backend, string> = {
   never connect to Mongo directly. \`checkPermission(action)\` is on the context.`,
 };
 
-const API_REGISTRATION: Record<Backend, string> = {
-  express: `On start, \`api/src/gateway.ts\` writes what erxes-api-shared \`joinErxesGateway\`
+const API_REGISTRATION: Record<Integration, string> = {
+  standalone: `On start, \`api/src/gateway.ts\` writes what erxes-api-shared \`joinErxesGateway\`
 writes:
 
 - \`erxesservice:config:__name__\`: \`{ dbConnectionString, hasSubscriptions, meta, releaseVersion, uiEntry }\`.
@@ -192,7 +193,9 @@ export const scaffold = async (targetDir: string, options: ProjectOptions) => {
   await copyLayer("base", targetDir, tokens);
   // Framework-neutral API files (erxes.json + env loading).
   await copyLayer("api/shared", apiDir, tokens);
-  await copyLayer(BACKENDS[options.backend].template, apiDir, tokens);
+  for (const layer of BACKENDS[options.backend].templates) {
+    await copyLayer(layer, apiDir, tokens);
+  }
   await copyLayer(FRONTENDS[options.frontend].template, join(targetDir, "ui"), tokens);
   await configureApiRuntime(apiDir, options);
 

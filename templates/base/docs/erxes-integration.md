@@ -42,9 +42,9 @@ here is enough.
 
 ## Shared libraries
 
-`erxes-ui`, `ui-modules` and `erxes-api-shared` live inside the erxes monorepo
-and are not on npm. This repo consumes them as git dependencies on monorepo
-subdirectories:
+`erxes-ui` and `ui-modules` — plus `erxes-api-shared` on the platform stack —
+live inside the erxes monorepo and are not on npm. This repo consumes them as
+git dependencies on monorepo subdirectories:
 
 ```jsonc
 // ui/package.json
