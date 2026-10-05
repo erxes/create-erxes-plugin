@@ -1,5 +1,3 @@
-// @ts-expect-error — erxes-ui's packaged declarations are incomplete; the
-// exports exist at runtime (the package resolves to its TypeScript source).
 import { SettingsNavigationMenuLinkItem, Sidebar } from "erxes-ui";
 import manifest from "../../../erxes.json" with { type: "json" };
 
