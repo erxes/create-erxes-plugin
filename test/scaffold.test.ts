@@ -157,10 +157,23 @@ describe("backend stacks", () => {
         "ui/src/Settings.tsx",
         "ui/src/pages/IndexPage.tsx",
         "ui/src/modules/Navigation.tsx",
+        "ui/src/widgets/NotificationWidget.tsx",
       ]) {
         assert.ok(existsSync(join(dir, file)), file);
       }
       assert.equal(existsSync(join(dir, "ui/src/PluginIcon.tsx")), false);
+
+      const indexPage = await readFile(
+        join(dir, "ui/src/pages/IndexPage.tsx"),
+        "utf8",
+      );
+      const apiEntryHint =
+        backend === "platform"
+          ? "api/src/modules/sample"
+          : backend === "nestjs"
+            ? "api/src/status/status.resolver.ts"
+            : "api/src/graphql/schema.ts";
+      assert.ok(indexPage.includes(apiEntryHint), apiEntryHint);
     });
   }
 });

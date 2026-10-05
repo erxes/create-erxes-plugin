@@ -30,12 +30,21 @@ The gateway only composes plugins listed in its `ENABLED_PLUGINS`.
 3. core-ui routes `/<CONFIG.path>/*` to `__remote__/<CONFIG.name>` and
    `/settings/<CONFIG.path>/*` to `__remote__/<CONFIG.name>Settings`,
    rendering each expose's PascalCase export (`__Pascal__`, `__Pascal__Settings`).
+   A third expose, `__remote__/notificationWidget`, renders
+   `__name__:<module>.<action>` notifications in the inbox — it receives the
+   `TNotification` object as props and is resolved by the named export
+   `NotificationWidget`.
 4. The `hostShared` list in `ui/rspack.config.ts` — `react`, `react-dom`,
    `react-router`, `react-router-dom`, `@apollo/client`, `jotai`,
    `react-i18next`, `erxes-ui` and `ui-modules` — mirrors core-ui's
    `coreLibraries` singletons, so the page runs inside core-ui's router,
    ApolloProvider, i18n and design system with the user's auth cookie. The
    remote never bundles them.
+
+core-api sends a `__name__:system.welcome` notification to every user when the
+plugin is enabled; core-ui renders that one itself. Every other notification
+your API sends with contentType `__name__:<module>.<action>` opens in the
+inbox and renders through `ui/src/widgets/NotificationWidget.tsx`.
 
 core-ui in development also registers remotes it gets from
 `/get-frontend-plugins`, so `pnpm dev:uis` in erxes plus `__pmRun__ dev:ui`

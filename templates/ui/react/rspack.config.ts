@@ -45,11 +45,14 @@ export default defineConfig({
       name: remote,
       filename: "remoteEntry.js",
       // core-ui loads `<remote>/config` for CONFIG, `<remote>/<name>` for the
-      // page at `/<path>/*` and `<remote>/<name>Settings` at `/settings/<path>/*`.
+      // page at `/<path>/*`, `<remote>/<name>Settings` at `/settings/<path>/*`
+      // and `<remote>/notificationWidget` for `<name>:<module>.<action>`
+      // notifications in the inbox.
       exposes: {
         "./config": "./src/config.tsx",
         [`./${name}`]: "./src/Main.tsx",
         [`./${name}Settings`]: "./src/Settings.tsx",
+        "./notificationWidget": "./src/widgets/NotificationWidget.tsx",
       },
       shared: Object.fromEntries(
         hostShared.map((lib) => [lib, { singleton: true, import: false, requiredVersion: false }]),
