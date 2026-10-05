@@ -55,6 +55,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-sidebar: var(--sidebar-background);
+  --color-scroll: var(--scroll);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);

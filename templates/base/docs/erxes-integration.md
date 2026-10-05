@@ -27,8 +27,9 @@ The gateway only composes plugins listed in its `ENABLED_PLUGINS`.
    for each enabled plugin. `entry` is the registered `uiEntry`, or
    `https://plugins.erxes.io/<releaseVersion>/__name___ui/remoteEntry.js`.
 2. core-ui loads `__remote__/config` and reads the exported `CONFIG`.
-3. core-ui routes `/<CONFIG.path>/*` to `__remote__/<CONFIG.name>` and renders
-   its default export or the export named in PascalCase (`__Pascal__`).
+3. core-ui routes `/<CONFIG.path>/*` to `__remote__/<CONFIG.name>` and
+   `/settings/<CONFIG.path>/*` to `__remote__/<CONFIG.name>Settings`,
+   rendering each expose's PascalCase export (`__Pascal__`, `__Pascal__Settings`).
 4. The `hostShared` list in `ui/rspack.config.ts` — `react`, `react-dom`,
    `react-router`, `react-router-dom`, `@apollo/client`, `jotai`,
    `react-i18next`, `erxes-ui` and `ui-modules` — mirrors core-ui's

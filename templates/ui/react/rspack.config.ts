@@ -35,17 +35,21 @@ export default defineConfig({
           },
         },
       },
-      { test: /\.css$/, use: ["postcss-loader"], type: "css" },
+      // JS-injected styles: a federated remote has no separate CSS file the
+      // host would load, so style-loader is the reliable path.
+      { test: /\.css$/, use: ["style-loader", "css-loader", "postcss-loader"] },
     ],
   },
   plugins: [
     new ModuleFederationPlugin({
       name: remote,
       filename: "remoteEntry.js",
-      // core-ui loads `<remote>/config` for CONFIG and `<remote>/<name>` for the page.
+      // core-ui loads `<remote>/config` for CONFIG, `<remote>/<name>` for the
+      // page at `/<path>/*` and `<remote>/<name>Settings` at `/settings/<path>/*`.
       exposes: {
         "./config": "./src/config.tsx",
         [`./${name}`]: "./src/Main.tsx",
+        [`./${name}Settings`]: "./src/Settings.tsx",
       },
       shared: Object.fromEntries(
         hostShared.map((lib) => [lib, { singleton: true, import: false, requiredVersion: false }]),

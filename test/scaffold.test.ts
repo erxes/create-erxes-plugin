@@ -152,6 +152,15 @@ describe("backend stacks", () => {
 
       const api = await readJson<PackageJson>(join(dir, "api/package.json"));
       assert.deepEqual(api.scripts, runtimesFor({ backend })[runtimeFor(pm)]?.scripts);
+
+      for (const file of [
+        "ui/src/Settings.tsx",
+        "ui/src/pages/IndexPage.tsx",
+        "ui/src/modules/Navigation.tsx",
+      ]) {
+        assert.ok(existsSync(join(dir, file)), file);
+      }
+      assert.equal(existsSync(join(dir, "ui/src/PluginIcon.tsx")), false);
     });
   }
 });
