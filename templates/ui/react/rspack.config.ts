@@ -57,6 +57,10 @@ export default defineConfig({
       dts: false,
     }),
   ],
+  // rspack serve enables lazy compilation for dynamic imports by default; its
+  // browser proxy calls the dev server with a relative URL, which 404s when
+  // core-ui loads this remote cross-origin. A federated remote cannot use it.
+  lazyCompilation: false,
   devServer: {
     port,
     headers: { "Access-Control-Allow-Origin": "*" },
