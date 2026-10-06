@@ -18,6 +18,7 @@
     "dev": "pnpm templates && tsx src/index.ts",
     "check": "pnpm templates && tsc --noEmit",
     "test": "pnpm templates && tsx --test test/*.test.ts",
+    "test:e2e": "pnpm templates && E2E=1 tsx --test test/e2e.test.ts",
     "templates": "tsx scripts/embed-templates.ts",
     "compile": "tsx scripts/compile.ts",
     "lint": "oxlint src test scripts",
