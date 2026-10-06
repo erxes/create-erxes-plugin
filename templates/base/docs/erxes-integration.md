@@ -53,8 +53,11 @@ here is enough.
 ## Shared libraries
 
 `erxes-ui` and `ui-modules` — plus `erxes-api-shared` on the platform stack —
-live inside the erxes monorepo and are not on npm. This repo consumes them as
-git dependencies on monorepo subdirectories:
+are published to npm as `@erxes/ui`, `@erxes/ui-modules` and
+`@erxes/api-shared` ([erxes/ui](https://github.com/erxes/ui),
+[erxes/ui-modules](https://github.com/erxes/ui-modules),
+[erxes/api-shared](https://github.com/erxes/api-shared)). This repo installs
+them under the names erxes code imports, with npm aliases:
 
 ```jsonc
 // ui/package.json
@@ -69,28 +72,17 @@ git dependencies on monorepo subdirectories:
 
 Notes:
 
-- The `#__erxesRef__` ref is what your plugin compiles and type-checks
-  against. Pin it to the commit your erxes deployment runs — the host provides
-  `erxes-ui`/`ui-modules` as Module Federation singletons at runtime, so a
-  type/runtime mismatch surfaces as broken imports, not as a helpful error.
-- pnpm resolves `&path:` monorepo subdirectories in git deps. The other
-  package managers get a `file:../../erxes/...` fallback instead (relative to
-  `api/` and `ui/`, so it points at an `erxes` clone next to this repo) —
-  adjust the path if your clone lives elsewhere. `file:` specs do not run
-  `prepare`, so run `pnpm install` in the erxes clone once first — its
-  workspace install builds each library's `dist/` declarations and bundles.
-- pnpm installs use `node-linker=hoisted` (`.npmrc`). erxes-ui emits its
-  declarations with `tsc` during `prepare`; in pnpm's default isolated layout
-  its transitive deps can't be named, `tsc` skips those files (TS2742) and
-  exports like `Sidebar` disappear from `dist/`. Keep the setting until
-  erxes-ui annotates those exports.
-- `erxes-api-shared` runs its `prepare` (preconstruct build) on install, which
-  is what produces its `dist/` bundles; `erxes-ui` and `ui-modules` emit
-  `dist/` type declarations the same way. With `dist/` present, `tsc`
-  type-checks the plugin against declarations only — the libraries' own
-  source is never re-checked against this repo's dependency versions.
-- When erxes publishes these libraries to npm, swap the git/file specifiers
-  for version ranges and nothing else changes.
+- Each package has its own semver version. erxes pins the exact versions it
+  is built with (the root `package.json` for the UI packages, each backend
+  `package.json` for `erxes-api-shared`); keep this repo on the same versions
+  as your erxes deployment. The host provides `erxes-ui`/`ui-modules` as
+  Module Federation singletons at runtime, so a mismatch surfaces as broken
+  imports, not as a helpful error.
+- The packages ship compiled code and type declarations, so `tsc` checks the
+  plugin against declarations only.
+- With pnpm, `ui-modules` reports its `erxes-ui` peer as unmet: pnpm can't
+  compare an aliased peer range. The peer is still linked to the `erxes-ui`
+  this repo installs, so the warning is harmless.
 
 ## Styling
 

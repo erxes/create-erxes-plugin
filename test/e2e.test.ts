@@ -7,15 +7,20 @@ import { x } from "tinyexec";
 import { runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
 import { scaffold } from "../src/scaffold.ts";
-import { BACKENDS, type Backend } from "../src/stacks.ts";
+import { BACKENDS, type Backend, type PackageManager } from "../src/stacks.ts";
 
-// Installs real dependencies (the erxes libraries come from GitHub), so it is
-// opt-in: E2E=1 pnpm test:e2e. Only pnpm can install without a local erxes
-// clone, which limits the matrix to the stacks that run on Node.js.
+// Installs real dependencies from npm, so it is opt-in: E2E=1 pnpm test:e2e.
+// Every backend runs with pnpm (bun where it is Bun-only); the platform stack
+// also runs with npm and yarn, since external plugins use all of them.
 const enabled = process.env.E2E === "1";
-const backends = (Object.keys(BACKENDS) as Backend[]).filter(
-  (backend) => runtimesFor({ backend }).node,
-);
+const cases: [Backend, PackageManager][] = [
+  ...(Object.keys(BACKENDS) as Backend[]).map((backend): [Backend, PackageManager] => [
+    backend,
+    runtimesFor({ backend }).node ? "pnpm" : "bun",
+  ]),
+  ["platform", "npm"],
+  ["platform", "yarn"],
+];
 
 const run = async (command: string, args: string[], cwd: string) => {
   const result = await x(command, args, { nodeOptions: { cwd }, throwOnError: false });
@@ -35,23 +40,23 @@ describe("generated projects install, type-check and build", { skip: !enabled },
     await rm(root, { recursive: true, force: true });
   });
 
-  for (const backend of backends) {
-    it(`${backend} with pnpm`, { timeout: 15 * 60_000 }, async () => {
-      const dir = join(root, backend);
+  for (const [backend, pm] of cases) {
+    it(`${backend} with ${pm}`, { timeout: 15 * 60_000 }, async () => {
+      const dir = join(root, `${backend}-${pm}`);
       await scaffold(dir, {
         names: derivePluginNames(`e2e-${backend}`),
         description: "End-to-end test plugin",
         backend,
         frontend: "react",
-        packageManager: "pnpm",
+        packageManager: pm,
         apiPort: 3400,
         uiPort: 3100,
       });
 
-      await run("pnpm", ["install"], dir);
-      await run("pnpm", ["run", "check"], dir);
-      await run("pnpm", ["run", "lint"], dir);
-      await run("pnpm", ["run", "build"], dir);
+      await run(pm, ["install"], dir);
+      await run(pm, ["run", "check"], dir);
+      await run(pm, ["run", "lint"], dir);
+      await run(pm, ["run", "build"], dir);
     });
   }
 });

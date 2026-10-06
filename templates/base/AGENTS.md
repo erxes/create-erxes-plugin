@@ -35,9 +35,10 @@ __apiContracts__
   `ui/src/widgets/NotificationWidget.tsx` exports `NotificationWidget` for the
   `./notificationWidget` inbox expose. Keep the expose names in
   `ui/rspack.config.ts` in sync with `erxes.json`.
-- `erxes-ui`, `ui-modules` and `erxes-api-shared` are consumed as git
-  dependencies on the erxes monorepo at ref `__erxesRef__`; pin that ref to
-  the commit your erxes deployment runs.
+- `erxes-ui`, `ui-modules` and `erxes-api-shared` are the npm packages
+  `@erxes/ui`, `@erxes/ui-modules` and `@erxes/api-shared`, installed under
+  those import names with npm aliases; keep them on the versions your erxes
+  deployment pins.
 
 ## Rules
 
@@ -50,8 +51,8 @@ __apiContracts__
   provides them at runtime. Keep the list in sync with core-ui's
   `coreLibraries`.
 - `erxes-ui`/`ui-modules` imports resolve to the shared singleton at runtime,
-  so their versions must match the host — that is why the deps pin to
-  `__erxesRef__`.
+  so the installed versions should match the host's — they only decide what
+  TypeScript and Rspack resolve against.
 - UI classes use the `__twPrefix__:` Tailwind prefix and the host tokens
   (`bg-background`, `text-muted-foreground`, `border-border`, …).
 - Authorize in the API using `context.user`; the UI route guard is not a

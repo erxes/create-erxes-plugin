@@ -149,6 +149,6 @@ export const workspaceRun = (pm: PackageManager, workspace: string, script: stri
   ({
     npm: `npm run ${script} -w ${workspace}`,
     pnpm: `pnpm --filter ${workspace} ${script}`,
-    yarn: `yarn workspace ${workspace} ${script}`,
+    yarn: `yarn workspace ${workspace} run ${script}`,
     bun: `bun --filter ${workspace} ${script}`,
   })[pm];

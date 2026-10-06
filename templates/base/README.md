@@ -11,8 +11,8 @@ without erxes source changes.
 | UI     | `ui`         | React 18 Module Federation remote (Rspack), Tailwind CSS | __uiPort__  |
 | Shared | `erxes.json` | Plugin identity and ports read by both parts             |             |
 
-The UI consumes the monorepo's `erxes-ui`/`ui-modules` design system as a git
-dependency on `erxes/erxes@__erxesRef__` (see
+The UI uses erxes's `erxes-ui`/`ui-modules` design system, installed from npm
+(`@erxes/ui`, `@erxes/ui-modules`; see
 [docs/erxes-integration.md](docs/erxes-integration.md#shared-libraries)). The
 host supplies them at runtime via Module Federation singletons — they are
 installed only so TypeScript and Rspack can resolve the imports.

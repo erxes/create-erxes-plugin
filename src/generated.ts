@@ -20,8 +20,6 @@ export type ProjectOptions = {
   packageManagerVersion?: string;
   apiPort: number;
   uiPort: number;
-  /** Git ref (branch, tag or sha) of erxes/erxes for shared-library git deps. */
-  erxesRef?: string;
 };
 
 /** Shape of `erxes.json`, the plugin's single source of identity and ports. */
@@ -56,9 +54,8 @@ export const createManifest = (o: ProjectOptions): ErxesManifest => ({
 });
 
 /** A backend's per-runtime setups; a missing runtime means it is unsupported. */
-export const runtimesFor = (
-  o: Pick<ProjectOptions, "backend">,
-): BackendStack["runtimes"] => BACKENDS[o.backend].runtimes;
+export const runtimesFor = (o: Pick<ProjectOptions, "backend">): BackendStack["runtimes"] =>
+  BACKENDS[o.backend].runtimes;
 
 const LINT_DEPENDENCIES = { oxfmt: "^0.71.0", oxlint: "^1.86.0" };
 
@@ -99,23 +96,7 @@ const isYarnBerry = (o: ProjectOptions) =>
 /** Files that only exist for some package managers. */
 export const createPackageManagerFiles = (o: ProjectOptions): Record<string, string> => {
   if (o.packageManager === "pnpm") {
-    // Git-dependency `prepare` scripts are blocked by default; the erxes
-    // libraries must be allowlisted so they can emit dist/ on install.
-    return {
-      "pnpm-workspace.yaml":
-        "packages:\n" +
-        "  - api\n" +
-        "  - ui\n" +
-        "onlyBuiltDependencies:\n" +
-        '  - "erxes-api-shared"\n' +
-        '  - "erxes-ui"\n' +
-        '  - "ui-modules"\n',
-      // erxes-ui's prepare emits dist/*.d.ts with tsc. In pnpm's isolated
-      // layout its transitive deps (@radix-ui/*, …) are not resolvable by
-      // name, tsc hits TS2742 and silently skips those files' declarations
-      // (Sidebar, NavigationMenu…). A hoisted layout keeps them nameable.
-      ".npmrc": "node-linker=hoisted\n",
-    };
+    return { "pnpm-workspace.yaml": "packages:\n  - api\n  - ui\n" };
   }
   if (o.packageManager === "yarn") {
     return { ".yarnrc.yml": "nodeLinker: node-modules\n" };

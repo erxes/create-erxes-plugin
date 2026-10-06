@@ -1,12 +1,12 @@
 import { existsSync, readdirSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, relative, resolve } from "node:path";
 import * as p from "@clack/prompts";
 import { Command, Option } from "commander";
 import { getUserAgent } from "package-manager-detector/detect";
 import { x } from "tinyexec";
 import { type ProjectOptions, runtimesFor } from "./generated.ts";
 import { derivePluginNames, validatePluginName } from "./naming.ts";
-import { ERXES_CHECKOUT, erxesLibraries, scaffold } from "./scaffold.ts";
+import { scaffold } from "./scaffold.ts";
 import { VERSION } from "./templates.generated.ts";
 import {
   BACKENDS,
@@ -32,7 +32,6 @@ type CliOptions = {
   pm?: string;
   apiPort?: string;
   uiPort?: string;
-  erxesRef?: string;
   install: boolean;
   git: boolean;
   yes?: boolean;
@@ -173,14 +172,6 @@ const askPackageManager = async (cli: CliOptions): Promise<PackageManager> => {
   );
 };
 
-/** Libraries a non-pnpm install would resolve from the sibling erxes clone but cannot find. */
-const missingErxesLibraries = (targetDir: string, options: ProjectOptions) =>
-  options.packageManager === "pnpm"
-    ? []
-    : erxesLibraries(options).filter(
-        (library) => !existsSync(join(dirname(targetDir), ERXES_CHECKOUT, library, "package.json")),
-      );
-
 const run = async (command: string, args: string[], cwd: string) => {
   const result = await x(command, args, { nodeOptions: { cwd }, throwOnError: false });
   return { ok: result.exitCode === 0, output: `${result.stdout}${result.stderr}`.trim() };
@@ -231,7 +222,6 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
       packageManager === "npm" ? undefined : await packageManagerVersion(packageManager),
     apiPort,
     uiPort,
-    erxesRef: cli.erxesRef,
   };
 
   const spin = p.spinner();
@@ -246,26 +236,16 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
 
   let installFailure: string | undefined;
   if (install) {
-    const missing = missingErxesLibraries(targetDir, options);
-    if (missing.length) {
-      const fromCwd = relative(process.cwd(), join(dirname(targetDir), ERXES_CHECKOUT));
-      const checkout = fromCwd.startsWith("..") ? fromCwd : `./${fromCwd}`;
-      installFailure = [
-        `${packageManager} installs the erxes shared libraries from a local erxes clone, but ${checkout} is missing ${missing.join(", ")}.`,
-        `Clone erxes/erxes to ${checkout}, run pnpm install there, then run ${packageManager} install in the plugin — or use --pm pnpm, which installs them from GitHub.`,
-      ].join("\n");
+    spin.start(`Installing dependencies with ${packageManager}`);
+    const result = await run(packageManager, ["install"], targetDir);
+    if (result.ok) {
+      // Token lengths shift Markdown tables and generated JSON; normalize them.
+      await run(packageManager, ["run", "fmt"], targetDir);
+      spin.stop("Dependencies installed");
     } else {
-      spin.start(`Installing dependencies with ${packageManager}`);
-      const result = await run(packageManager, ["install"], targetDir);
-      if (result.ok) {
-        // Token lengths shift Markdown tables and generated JSON; normalize them.
-        await run(packageManager, ["run", "fmt"], targetDir);
-        spin.stop("Dependencies installed");
-      } else {
-        spin.error(`${packageManager} install failed`);
-        p.log.message(result.output);
-        installFailure = `${packageManager} install failed; see the output above.`;
-      }
+      spin.error(`${packageManager} install failed`);
+      p.log.message(result.output);
+      installFailure = `${packageManager} install failed; see the output above.`;
     }
   }
 
@@ -311,10 +291,6 @@ export const runCli = async (argv: string[]) => {
     .addOption(new Option("--pm <manager>", "package manager").choices([...PACKAGE_MANAGERS]))
     .option("--api-port <port>", `API dev port (default ${DEFAULT_API_PORT})`)
     .option("--ui-port <port>", `UI dev server port (default ${DEFAULT_UI_PORT})`)
-    .option(
-      "--erxes-ref <ref>",
-      "git ref of erxes/erxes for shared-library deps: branch, tag or sha (default main)",
-    )
     .option("--no-install", "skip installing dependencies")
     .option("--no-git", "skip git init")
     .option("-y, --yes", "accept defaults for every unanswered question")

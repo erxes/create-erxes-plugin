@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { type ErxesManifest, type ProjectOptions, runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
-import { scaffold } from "../src/scaffold.ts";
+import { ERXES_PACKAGES, scaffold } from "../src/scaffold.ts";
 import {
   BACKENDS,
   type Backend,
@@ -99,7 +99,7 @@ for (const pm of PACKAGE_MANAGERS) {
       const filter = {
         npm: "npm run dev -w erxes-agent-v2_api",
         pnpm: "pnpm --filter erxes-agent-v2_api dev",
-        yarn: "yarn workspace erxes-agent-v2_api dev",
+        yarn: "yarn workspace erxes-agent-v2_api run dev",
         bun: "bun --filter erxes-agent-v2_api dev",
       }[pm];
       assert.equal(pkg.scripts["dev:api"], filter);
@@ -107,35 +107,20 @@ for (const pm of PACKAGE_MANAGERS) {
       assert.equal(pkg.workspaces === undefined, pm === "pnpm");
     });
 
-    it("hoists pnpm installs so erxes-ui emits complete declarations", async () => {
-      const npmrc = join(dir, ".npmrc");
-      assert.equal(existsSync(npmrc), pm === "pnpm");
+    it("needs no install settings for the erxes shared libraries", async () => {
+      assert.equal(existsSync(join(dir, ".npmrc")), false);
       if (pm === "pnpm") {
-        assert.match(await readFile(npmrc, "utf8"), /^node-linker=hoisted$/m);
-        assert.match(
-          await readFile(join(dir, "Dockerfile"), "utf8"),
-          /COPY package\.json .*\.npmrc/,
+        assert.equal(
+          await readFile(join(dir, "pnpm-workspace.yaml"), "utf8"),
+          "packages:\n  - api\n  - ui\n",
         );
       }
     });
 
-    it("points the erxes shared libraries at GitHub (pnpm) or a sibling clone", async () => {
+    it("installs the erxes shared libraries from npm under their import names", async () => {
       const ui = await readJson<PackageJson>(join(dir, "ui/package.json"));
-      for (const [name, library] of [
-        ["erxes-ui", "frontend/libs/erxes-ui"],
-        ["ui-modules", "frontend/libs/ui-modules"],
-      ] as const) {
-        const spec = ui.devDependencies[name] ?? "";
-        if (pm === "pnpm") {
-          assert.equal(spec, `github:erxes/erxes#main&path:${library}`);
-        } else {
-          assert.ok(spec.startsWith("file:"), spec);
-          // file: specs resolve from ui/; the clone sits next to the plugin root.
-          assert.equal(
-            resolve(dir, "ui", spec.slice("file:".length)),
-            resolve(dir, "..", "erxes", library),
-          );
-        }
+      for (const name of ["erxes-ui", "ui-modules"] as const) {
+        assert.equal(ui.devDependencies[name], ERXES_PACKAGES[name]);
       }
     });
   });
@@ -175,10 +160,7 @@ describe("backend stacks", () => {
       assert.equal(existsSync(join(dir, "api/src/gateway.ts")), standalone);
       assert.equal(existsSync(join(dir, "api/src/context.ts")), standalone);
       // NestJS is code-first; the other stacks carry the SDL template.
-      assert.equal(
-        existsSync(join(dir, "api/src/graphql/schema.ts")),
-        backend !== "nestjs",
-      );
+      assert.equal(existsSync(join(dir, "api/src/graphql/schema.ts")), backend !== "nestjs");
 
       const manifest = await readJson<ErxesManifest>(join(dir, "erxes.json"));
       assert.equal(manifest.api.framework, backend);
@@ -200,10 +182,7 @@ describe("backend stacks", () => {
       }
       assert.equal(existsSync(join(dir, "ui/src/PluginIcon.tsx")), false);
 
-      const indexPage = await readFile(
-        join(dir, "ui/src/pages/IndexPage.tsx"),
-        "utf8",
-      );
+      const indexPage = await readFile(join(dir, "ui/src/pages/IndexPage.tsx"), "utf8");
       const apiEntryHint =
         backend === "platform"
           ? "api/src/modules/sample"
