@@ -69,7 +69,8 @@ erxes.json        plugin identity and ports, read by api/ and ui/
 api/              platform stack: erxes-api-shared startPlugin + tenant Mongoose models (Node.js)
                   standalone stacks: Express, Fastify, Hono or Elysia (Bun) subgraph APIs,
                   or NestJS code-first federation (Node.js)
-ui/               React 18 Rspack Module Federation remote, prefixed Tailwind CSS
+ui/               React 18 Rspack Module Federation remote, prefixed Tailwind CSS —
+                  overview/settings pages plus a notification inbox widget
 Dockerfile        API-only image for the chosen package manager
 README.md, AGENTS.md, docs/erxes-integration.md
 ```

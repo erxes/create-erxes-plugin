@@ -30,8 +30,11 @@ See `docs/erxes-integration.md`. In short:
 __apiContracts__
 - Prefix every GraphQL type with `__Pascal__` and every operation and root
   field with `__camel__`; the supergraph is shared by all plugins.
-- `ui/src/config.tsx` exports `CONFIG`; `ui/src/Main.tsx` exports `__Pascal__`.
-  Keep both expose names in `ui/rspack.config.ts` in sync with `erxes.json`.
+- `ui/src/config.tsx` exports `CONFIG`; `ui/src/Main.tsx` exports `__Pascal__`;
+  `ui/src/Settings.tsx` exports `__Pascal__Settings`;
+  `ui/src/widgets/NotificationWidget.tsx` exports `NotificationWidget` for the
+  `./notificationWidget` inbox expose. Keep the expose names in
+  `ui/rspack.config.ts` in sync with `erxes.json`.
 - `erxes-ui`, `ui-modules` and `erxes-api-shared` are consumed as git
   dependencies on the erxes monorepo at ref `__erxesRef__`; pin that ref to
   the commit your erxes deployment runs.

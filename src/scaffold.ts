@@ -68,6 +68,14 @@ const tokensFor = ({
   tokens.push(
     ["__apiContracts__", applyTokens(API_CONTRACTS[integration], tokens)],
     ["__apiRegistration__", applyTokens(API_REGISTRATION[integration], tokens)],
+    [
+      "__apiEntryHint__",
+      backend === "platform"
+        ? "api/src/modules/sample"
+        : backend === "nestjs"
+          ? "api/src/status/status.resolver.ts"
+          : "api/src/graphql/schema.ts",
+    ],
   );
 
   return tokens;
