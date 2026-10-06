@@ -59,12 +59,18 @@ export const runtimesFor = (o: Pick<ProjectOptions, "backend">): BackendStack["r
 
 const LINT_DEPENDENCIES = { oxfmt: "^0.71.0", oxlint: "^1.86.0" };
 
+/** Runs a script at the workspace root (yarn drops the extra `run`). */
+const rootRun = (pm: PackageManager, script: string) =>
+  pm === "yarn" ? `yarn ${script}` : `${pm} run ${script}`;
+
 export const createRootPackageJson = (o: ProjectOptions) => {
   const { packageManager: pm, names } = o;
   const api = `${names.name}_api`;
   const ui = `${names.name}_ui`;
   const apiScripts = runtimesFor(o)[runtimeFor(pm)]?.scripts ?? {};
+  const codegen = rootRun(pm, "codegen");
   const build = [
+    codegen,
     ...("build" in apiScripts ? [workspaceRun(pm, api, "build")] : []),
     workspaceRun(pm, ui, "build"),
   ];
@@ -77,9 +83,13 @@ export const createRootPackageJson = (o: ProjectOptions) => {
     ...(pm === "pnpm" ? {} : { workspaces: ["api", "ui"] }),
     scripts: {
       "dev:api": workspaceRun(pm, api, "dev"),
-      "dev:ui": workspaceRun(pm, ui, "dev"),
+      "dev:ui": `${codegen} && ${workspaceRun(pm, ui, "dev")}`,
+      codegen: [
+        workspaceRun(pm, api, "schema:print"),
+        workspaceRun(pm, ui, "codegen"),
+      ].join(" && "),
       build: build.join(" && "),
-      check: [workspaceRun(pm, api, "check"), workspaceRun(pm, ui, "check")].join(" && "),
+      check: [codegen, workspaceRun(pm, api, "check"), workspaceRun(pm, ui, "check")].join(" && "),
       lint: "oxlint",
       fmt: "oxfmt",
     },

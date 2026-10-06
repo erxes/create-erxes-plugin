@@ -4,7 +4,7 @@ import { GraphQLModule } from "@nestjs/graphql";
 import { manifest } from "./config.ts";
 import { createContext, type HeaderSource } from "./context.ts";
 import { HealthController } from "./health.controller.ts";
-import { StatusResolver } from "./status/status.resolver.ts";
+import { RESOLVERS } from "./resolvers.ts";
 
 @Module({
   imports: [
@@ -17,6 +17,6 @@ import { StatusResolver } from "./status/status.resolver.ts";
     }),
   ],
   controllers: [HealthController],
-  providers: [StatusResolver],
+  providers: RESOLVERS,
 })
 export class AppModule {}

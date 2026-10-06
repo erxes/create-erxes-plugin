@@ -26,6 +26,9 @@ __pmRun__ dev:api   # registers with the erxes gateway through Redis
 __pmRun__ dev:ui    # serves http://localhost:__uiPort__/remoteEntry.js
 ```
 
+`check`, `build` and `dev:ui` run `codegen` first, so the generated GraphQL
+types always match the printed API schema.
+
 In the erxes checkout `.env`, add the plugin and restart the gateway and
 core-api so they pick it up:
 
@@ -44,14 +47,15 @@ curl localhost:__apiPort__/graphql -H 'content-type: application/json' \
 
 ## Scripts
 
-| Script              | What it does                   |
-| ------------------- | ------------------------------ |
-| `__pmRun__ dev:api` | API in watch mode              |
-| `__pmRun__ dev:ui`  | UI remote dev server           |
-| `__pmRun__ build`   | Production build of every part |
-| `__pmRun__ check`   | Type-check every part          |
-| `__pmRun__ lint`    | oxlint                         |
-| `__pmRun__ fmt`     | oxfmt                          |
+| Script              | What it does                                    |
+| ------------------- | ----------------------------------------------- |
+| `__pmRun__ dev:api` | API in watch mode                               |
+| `__pmRun__ dev:ui`  | UI remote dev server                            |
+| `__pmRun__ codegen` | Print the API schema, generate UI GraphQL types |
+| `__pmRun__ build`   | Production build of every part                  |
+| `__pmRun__ check`   | Type-check every part                           |
+| `__pmRun__ lint`    | oxlint                                          |
+| `__pmRun__ fmt`     | oxfmt                                           |
 
 ## Deploy
 

@@ -6,18 +6,23 @@
   "scripts": {
     "dev": "rspack serve",
     "build": "rspack build",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.48.0"
   },
   "devDependencies": {
     "@apollo/client": "^3.14.1",
+    "@graphql-codegen/cli": "^7.4.3",
+    "@graphql-codegen/client-preset": "^6.2.0",
+    "@graphql-typed-document-node/core": "^3.2.0",
     "@module-federation/enhanced": "^2.9.2",
     "@rspack/cli": "^2.2.8",
     "@rspack/core": "^2.2.8",
     "@rspack/dev-server": "^2.2.1",
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.4",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "css-loader": "^7.1.5",

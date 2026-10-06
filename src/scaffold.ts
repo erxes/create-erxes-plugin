@@ -17,6 +17,7 @@ const DOTFILES: Record<string, string> = {
   _gitignore: ".gitignore",
   _dockerignore: ".dockerignore",
   "_env.example": ".env.example",
+  "_oxlintrc.json": ".oxlintrc.json",
 };
 
 /** The erxes shared libraries on npm, installed under the names erxes code imports. */
@@ -72,6 +73,12 @@ const tokensFor = ({
         : backend === "nestjs"
           ? "api/src/status/status.resolver.ts"
           : "api/src/graphql/schema.ts",
+    ],
+    [
+      "__schemaPrint__",
+      backend === "nestjs"
+        ? "`api/src/print-schema.ts` builds the schema from `RESOLVERS` in `api/src/resolvers.ts`; register every resolver class there (AppModule reads the same list)"
+        : "`api/src/print-schema.ts` prints `typeDefs` from `api/src/graphql/schema.ts` to `api/generated/schema.graphql`",
     ],
   );
 

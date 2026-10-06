@@ -1,6 +1,6 @@
 {
   "name": "@erxes/create-plugin",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Scaffold a standalone erxes plugin repository (API + React UI remote)",
   "license": "MIT",
   "repository": {

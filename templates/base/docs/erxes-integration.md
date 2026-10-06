@@ -84,6 +84,17 @@ Notes:
   compare an aliased peer range. The peer is still linked to the `erxes-ui`
   this repo installs, so the warning is harmless.
 
+## GraphQL types
+
+`__pmRun__ codegen` prints the API's subgraph SDL to
+`api/generated/schema.graphql`, then `ui/codegen.ts` (graphql-codegen client
+preset) validates every `gql()` document under `ui/src` against it and
+generates typed documents into `ui/src/gql/` (gitignored, like
+`api/generated`). Import `gql` from `~/gql` and let Apollo hooks infer their
+types — drift between the SDL and the UI fails `check` instead of surfacing
+as a runtime Apollo error. The same pattern backs erxes's own `operation`
+plugin.
+
 ## Styling
 
 core-ui ships Tailwind preflight and unprefixed utilities for its own code.

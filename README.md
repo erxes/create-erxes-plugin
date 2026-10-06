@@ -75,6 +75,7 @@ api/              platform stack: erxes-api-shared startPlugin + tenant Mongoose
                   or NestJS code-first federation (Node.js)
 ui/               React 18 Rspack Module Federation remote, prefixed Tailwind CSS —
                   overview/settings pages plus a notification inbox widget
+                  GraphQL types generated from the printed API schema (graphql-codegen)
 Dockerfile        API-only image for the chosen package manager
 README.md, AGENTS.md, docs/erxes-integration.md
 ```
