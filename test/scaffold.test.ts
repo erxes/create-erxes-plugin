@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { type ErxesManifest, type ProjectOptions, runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
-import { scaffold } from "../src/scaffold.ts";
+import { ERXES_PACKAGES, scaffold } from "../src/scaffold.ts";
 import {
   BACKENDS,
   type Backend,
@@ -61,9 +61,10 @@ for (const pm of PACKAGE_MANAGERS) {
     });
 
     it("writes dotfiles and the manifest", async () => {
-      for (const file of [".gitignore", ".dockerignore", "api/.env.example", "Dockerfile"]) {
+      for (const file of [".gitignore", ".dockerignore", ".env.example", "Dockerfile"]) {
         assert.ok(existsSync(join(dir, file)), file);
       }
+      assert.equal(existsSync(join(dir, "api/.env.example")), false);
       const manifest = await readJson<{ name: string; ui: Record<string, unknown> }>(
         join(dir, "erxes.json"),
       );
@@ -81,7 +82,7 @@ for (const pm of PACKAGE_MANAGERS) {
       const api = await readJson<PackageJson>(join(dir, "api/package.json"));
       const dockerfile = await readFile(join(dir, "Dockerfile"), "utf8");
       if (pm === "bun") {
-        assert.equal(api.scripts.dev, "bun --watch src/main.ts");
+        assert.equal(api.scripts.dev, "bun --env-file=../.env --watch src/main.ts");
         assert.ok(api.devDependencies["@types/bun"]);
         assert.match(dockerfile, /CMD \["bun", "api\/src\/main.ts"\]/);
       } else {
@@ -98,12 +99,29 @@ for (const pm of PACKAGE_MANAGERS) {
       const filter = {
         npm: "npm run dev -w erxes-agent-v2_api",
         pnpm: "pnpm --filter erxes-agent-v2_api dev",
-        yarn: "yarn workspace erxes-agent-v2_api dev",
+        yarn: "yarn workspace erxes-agent-v2_api run dev",
         bun: "bun --filter erxes-agent-v2_api dev",
       }[pm];
       assert.equal(pkg.scripts["dev:api"], filter);
       assert.equal(existsSync(join(dir, "pnpm-workspace.yaml")), pm === "pnpm");
       assert.equal(pkg.workspaces === undefined, pm === "pnpm");
+    });
+
+    it("needs no install settings for the erxes shared libraries", async () => {
+      assert.equal(existsSync(join(dir, ".npmrc")), false);
+      if (pm === "pnpm") {
+        assert.equal(
+          await readFile(join(dir, "pnpm-workspace.yaml"), "utf8"),
+          "packages:\n  - api\n  - ui\n",
+        );
+      }
+    });
+
+    it("installs the erxes shared libraries from npm under their import names", async () => {
+      const ui = await readJson<PackageJson>(join(dir, "ui/package.json"));
+      for (const name of ["erxes-ui", "ui-modules"] as const) {
+        assert.equal(ui.devDependencies[name], ERXES_PACKAGES[name]);
+      }
     });
   });
 }
@@ -142,16 +160,17 @@ describe("backend stacks", () => {
       assert.equal(existsSync(join(dir, "api/src/gateway.ts")), standalone);
       assert.equal(existsSync(join(dir, "api/src/context.ts")), standalone);
       // NestJS is code-first; the other stacks carry the SDL template.
-      assert.equal(
-        existsSync(join(dir, "api/src/graphql/schema.ts")),
-        backend !== "nestjs",
-      );
+      assert.equal(existsSync(join(dir, "api/src/graphql/schema.ts")), backend !== "nestjs");
 
       const manifest = await readJson<ErxesManifest>(join(dir, "erxes.json"));
       assert.equal(manifest.api.framework, backend);
 
       const api = await readJson<PackageJson>(join(dir, "api/package.json"));
       assert.deepEqual(api.scripts, runtimesFor({ backend })[runtimeFor(pm)]?.scripts);
+      // Scripts run in api/ and must read the single .env at the repo root.
+      for (const script of [api.scripts.dev, api.scripts.start]) {
+        assert.match(script ?? "", /--env-file(-if-exists)?=\.\.\/\.env\b/, script);
+      }
 
       for (const file of [
         "ui/src/Settings.tsx",
@@ -163,10 +182,7 @@ describe("backend stacks", () => {
       }
       assert.equal(existsSync(join(dir, "ui/src/PluginIcon.tsx")), false);
 
-      const indexPage = await readFile(
-        join(dir, "ui/src/pages/IndexPage.tsx"),
-        "utf8",
-      );
+      const indexPage = await readFile(join(dir, "ui/src/pages/IndexPage.tsx"), "utf8");
       const apiEntryHint =
         backend === "platform"
           ? "api/src/modules/sample"

@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "description": "Scaffold a standalone erxes plugin repository (API + React UI remote)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erxes/create-erxes-plugin.git"
+  },
+  "homepage": "https://github.com/erxes/create-erxes-plugin#readme",
+  "bugs": "https://github.com/erxes/create-erxes-plugin/issues",
   "type": "module",
   "bin": {
     "create-erxes-plugin": "dist/index.js"
@@ -11,13 +17,14 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20.12"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "pnpm templates && tsc -p tsconfig.build.json",
     "dev": "pnpm templates && tsx src/index.ts",
     "check": "pnpm templates && tsc --noEmit",
     "test": "pnpm templates && tsx --test test/*.test.ts",
+    "test:e2e": "pnpm templates && E2E=1 tsx --test test/e2e.test.ts",
     "templates": "tsx scripts/embed-templates.ts",
     "compile": "tsx scripts/compile.ts",
     "lint": "oxlint src test scripts",
@@ -26,12 +33,12 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "package-manager-detector": "^1.8.0",
     "tinyexec": "^1.3.1"
   },
   "devDependencies": {
-    "@types/node": "^22.18.0",
+    "@types/node": "^22.20.4",
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",
     "tsx": "^4.23.15",

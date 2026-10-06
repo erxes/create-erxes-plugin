@@ -32,7 +32,6 @@ type CliOptions = {
   pm?: string;
   apiPort?: string;
   uiPort?: string;
-  erxesRef?: string;
   install: boolean;
   git: boolean;
   yes?: boolean;
@@ -223,7 +222,6 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
       packageManager === "npm" ? undefined : await packageManagerVersion(packageManager),
     apiPort,
     uiPort,
-    erxesRef: cli.erxesRef,
   };
 
   const spin = p.spinner();
@@ -236,6 +234,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     if (!git.ok) p.log.warn(`git init failed: ${git.output}`);
   }
 
+  let installFailure: string | undefined;
   if (install) {
     spin.start(`Installing dependencies with ${packageManager}`);
     const result = await run(packageManager, ["install"], targetDir);
@@ -246,6 +245,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     } else {
       spin.error(`${packageManager} install failed`);
       p.log.message(result.output);
+      installFailure = `${packageManager} install failed; see the output above.`;
     }
   }
 
@@ -255,8 +255,8 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
   p.note(
     [
       ...(cd ? [`cd ${cd}`] : []),
-      ...(install ? [] : [`${packageManager} install`]),
-      "cp api/.env.example api/.env",
+      ...(install && !installFailure ? [] : [`${packageManager} install`]),
+      "cp .env.example .env",
       runScript("dev:api"),
       runScript("dev:ui"),
       "",
@@ -264,6 +264,13 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     ].join("\n"),
     "Next steps",
   );
+
+  if (installFailure) {
+    p.log.error(installFailure);
+    p.outro(`Plugin "${name}" was created, but its dependencies are not installed.`);
+    process.exitCode = 1;
+    return;
+  }
   p.outro(`Plugin "${name}" is ready. See README.md.`);
 };
 
@@ -284,10 +291,6 @@ export const runCli = async (argv: string[]) => {
     .addOption(new Option("--pm <manager>", "package manager").choices([...PACKAGE_MANAGERS]))
     .option("--api-port <port>", `API dev port (default ${DEFAULT_API_PORT})`)
     .option("--ui-port <port>", `UI dev server port (default ${DEFAULT_UI_PORT})`)
-    .option(
-      "--erxes-ref <ref>",
-      "git ref of erxes/erxes for shared-library deps: branch, tag or sha (default main)",
-    )
     .option("--no-install", "skip installing dependencies")
     .option("--no-git", "skip git init")
     .option("-y, --yes", "accept defaults for every unanswered question")

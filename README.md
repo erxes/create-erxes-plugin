@@ -34,7 +34,7 @@ and adds it to the user PATH. Release assets are
 friends) and `create-erxes-plugin-windows-x64.zip`, verified against the
 release's `SHA256SUMS`. `create-erxes-plugin --version` prints the version.
 
-Or via a package manager (requires Node.js ≥ 20.12):
+Or via a package manager (requires Node.js ≥ 22.12):
 
 ```sh
 npx create-erxes-plugin inventory
@@ -55,7 +55,6 @@ The CLI asks for anything not passed as a flag:
 | `--pm <npm\|pnpm\|yarn\|bun>` | the package manager running the CLI |
 | `--api-port <port>`        | `3399`                          |
 | `--ui-port <port>`         | `3099`                          |
-| `--erxes-ref <ref>`        | `main` — git ref of erxes/erxes for the shared-library deps |
 | `--no-install`, `--no-git` | install and `git init` run      |
 | `-y, --yes`                | accept defaults                 |
 
@@ -79,6 +78,11 @@ The generated plugin registers with erxes exactly like erxes-api-shared
 `joinErxesGateway` — from `api/src/gateway.ts` for `express`, via `startPlugin`
 for `platform` — and follows the core-ui remote contract. See
 `templates/base/docs/erxes-integration.md`.
+
+erxes's shared libraries come from npm: the UI depends on `@erxes/ui` and
+`@erxes/ui-modules`, the platform API on `@erxes/api-shared`, each installed
+under the name erxes code imports (`erxes-ui`, `ui-modules`,
+`erxes-api-shared`). Any of the four package managers can install them.
 
 ## Layout
 

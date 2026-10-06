@@ -19,6 +19,13 @@ const DOTFILES: Record<string, string> = {
   "_env.example": ".env.example",
 };
 
+/** The erxes shared libraries on npm, installed under the names erxes code imports. */
+export const ERXES_PACKAGES = {
+  "erxes-ui": "npm:@erxes/ui@^1.0.0",
+  "ui-modules": "npm:@erxes/ui-modules@^1.0.0",
+  "erxes-api-shared": "npm:@erxes/api-shared@^1.0.0",
+} as const;
+
 const applyTokens = (text: string, tokens: [string, string][]) =>
   tokens.reduce((result, [token, value]) => result.replaceAll(token, value), text);
 
@@ -29,16 +36,7 @@ const tokensFor = ({
   uiPort,
   packageManager,
   backend,
-  erxesRef = "main",
 }: ProjectOptions): [string, string][] => {
-  // pnpm resolves monorepo subdirectories in git deps; the other package
-  // managers get a sibling-checkout fallback (erxes must be cloned next to the
-  // plugin to run its dev stack anyway).
-  const erxesDep = (path: string) =>
-    packageManager === "pnpm"
-      ? `github:erxes/erxes#${erxesRef}&path:${path}`
-      : `file:../erxes/${path}`;
-
   const tokens: [string, string][] = [
     ["__pmRun__", packageManager === "yarn" ? "yarn" : `${packageManager} run`],
     ["__pm__", packageManager],
@@ -55,10 +53,9 @@ const tokensFor = ({
     ["__description__", description],
     ["__backendLabel__", BACKENDS[backend].label],
     ["__backendHint__", BACKENDS[backend].hint],
-    ["__erxesRef__", erxesRef],
-    ["__erxesUiDep__", erxesDep("frontend/libs/erxes-ui")],
-    ["__erxesUiModulesDep__", erxesDep("frontend/libs/ui-modules")],
-    ["__erxesApiSharedDep__", erxesDep("backend/erxes-api-shared")],
+    ["__erxesUiDep__", ERXES_PACKAGES["erxes-ui"]],
+    ["__erxesUiModulesDep__", ERXES_PACKAGES["ui-modules"]],
+    ["__erxesApiSharedDep__", ERXES_PACKAGES["erxes-api-shared"]],
   ];
 
   // The prose blocks embed the same placeholders (e.g. `__name__` inside
