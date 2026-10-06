@@ -1,6 +1,6 @@
 {
   "name": "@erxes/create-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scaffold a standalone erxes plugin repository (API + React UI remote)",
   "license": "MIT",
   "repository": {
@@ -14,7 +14,8 @@
   },
   "type": "module",
   "bin": {
-    "create-erxes-plugin": "dist/index.js"
+    "create-erxes-plugin": "dist/index.js",
+    "create-plugin": "dist/index.js"
   },
   "files": [
     "dist"
