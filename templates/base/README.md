@@ -21,7 +21,7 @@ installed only so TypeScript and Rspack can resolve the imports.
 
 ```sh
 __pm__ install
-cp api/.env.example api/.env
+cp .env.example .env
 __pmRun__ dev:api   # registers with the erxes gateway through Redis
 __pmRun__ dev:ui    # serves http://localhost:__uiPort__/remoteEntry.js
 ```

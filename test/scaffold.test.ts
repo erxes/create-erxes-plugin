@@ -61,9 +61,10 @@ for (const pm of PACKAGE_MANAGERS) {
     });
 
     it("writes dotfiles and the manifest", async () => {
-      for (const file of [".gitignore", ".dockerignore", "api/.env.example", "Dockerfile"]) {
+      for (const file of [".gitignore", ".dockerignore", ".env.example", "Dockerfile"]) {
         assert.ok(existsSync(join(dir, file)), file);
       }
+      assert.equal(existsSync(join(dir, "api/.env.example")), false);
       const manifest = await readJson<{ name: string; ui: Record<string, unknown> }>(
         join(dir, "erxes.json"),
       );
@@ -81,7 +82,7 @@ for (const pm of PACKAGE_MANAGERS) {
       const api = await readJson<PackageJson>(join(dir, "api/package.json"));
       const dockerfile = await readFile(join(dir, "Dockerfile"), "utf8");
       if (pm === "bun") {
-        assert.equal(api.scripts.dev, "bun --watch src/main.ts");
+        assert.equal(api.scripts.dev, "bun --env-file=../.env --watch src/main.ts");
         assert.ok(api.devDependencies["@types/bun"]);
         assert.match(dockerfile, /CMD \["bun", "api\/src\/main.ts"\]/);
       } else {
@@ -184,6 +185,10 @@ describe("backend stacks", () => {
 
       const api = await readJson<PackageJson>(join(dir, "api/package.json"));
       assert.deepEqual(api.scripts, runtimesFor({ backend })[runtimeFor(pm)]?.scripts);
+      // Scripts run in api/ and must read the single .env at the repo root.
+      for (const script of [api.scripts.dev, api.scripts.start]) {
+        assert.match(script ?? "", /--env-file(-if-exists)?=\.\.\/\.env\b/, script);
+      }
 
       for (const file of [
         "ui/src/Settings.tsx",

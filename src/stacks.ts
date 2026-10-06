@@ -35,11 +35,13 @@ export const INTEGRATIONS = {
   },
 } as const;
 
+// API scripts run inside api/; the plugin's single .env lives at the repo root.
+// Bun would otherwise auto-load api/.env, so it gets the path explicitly too.
 const NODE_SETUP: RuntimeSetup = {
   scripts: {
-    dev: "tsx watch --env-file-if-exists=.env src/main.ts",
+    dev: "tsx watch --env-file-if-exists=../.env src/main.ts",
     build: "tsc -p tsconfig.build.json",
-    start: "node --env-file-if-exists=.env dist/main.js",
+    start: "node --env-file-if-exists=../.env dist/main.js",
     check: "tsc --noEmit",
   },
   devDependencies: { "@types/node": "^22.20.4", tsx: "^4.23.15" },
@@ -48,8 +50,8 @@ const NODE_SETUP: RuntimeSetup = {
 
 const BUN_SETUP: RuntimeSetup = {
   scripts: {
-    dev: "bun --watch src/main.ts",
-    start: "bun src/main.ts",
+    dev: "bun --env-file=../.env --watch src/main.ts",
+    start: "bun --env-file=../.env src/main.ts",
     check: "tsc --noEmit",
   },
   devDependencies: { "@types/bun": "^1.4.2" },
@@ -112,9 +114,9 @@ export const BACKENDS = {
     runtimes: {
       node: {
         scripts: {
-          dev: 'nest start --watch --exec "node --env-file-if-exists=.env"',
+          dev: 'nest start --watch --exec "node --env-file-if-exists=../.env"',
           build: "nest build",
-          start: "node --env-file-if-exists=.env dist/main.js",
+          start: "node --env-file-if-exists=../.env dist/main.js",
           check: "tsc --noEmit",
         },
         devDependencies: { "@nestjs/cli": "^12.0.8", "@types/node": "^22.20.4" },

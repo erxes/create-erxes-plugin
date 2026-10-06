@@ -276,7 +276,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     [
       ...(cd ? [`cd ${cd}`] : []),
       ...(install && !installFailure ? [] : [`${packageManager} install`]),
-      "cp api/.env.example api/.env",
+      "cp .env.example .env",
       runScript("dev:api"),
       runScript("dev:ui"),
       "",
