@@ -107,6 +107,31 @@ for (const pm of PACKAGE_MANAGERS) {
       assert.equal(pkg.workspaces === undefined, pm === "pnpm");
     });
 
+    it("wires codegen into the root scripts", async () => {
+      const pkg = await readJson<PackageJson>(join(dir, "package.json"));
+      const expectedCodegen = {
+        npm: "npm run schema:print -w erxes-agent-v2_api && npm run codegen -w erxes-agent-v2_ui",
+        pnpm: "pnpm --filter erxes-agent-v2_api schema:print && pnpm --filter erxes-agent-v2_ui codegen",
+        yarn: "yarn workspace erxes-agent-v2_api run schema:print && yarn workspace erxes-agent-v2_ui run codegen",
+        bun: "bun --filter erxes-agent-v2_api schema:print && bun --filter erxes-agent-v2_ui codegen",
+      }[pm];
+      assert.equal(pkg.scripts.codegen, expectedCodegen);
+      assert.ok(
+        pkg.scripts.check?.startsWith(
+          pm === "yarn" ? "yarn codegen && " : `${pm} run codegen && `,
+        ),
+        pkg.scripts.check,
+      );
+      assert.ok(existsSync(join(dir, "ui/codegen.ts")), "ui/codegen.ts");
+      assert.ok(existsSync(join(dir, ".oxlintrc.json")), ".oxlintrc.json");
+      const gitignore = await readFile(join(dir, ".gitignore"), "utf8");
+      assert.match(gitignore, /api\/generated/);
+      assert.match(gitignore, /ui\/src\/gql/);
+      const graphql = await readFile(join(dir, "ui/src/graphql.ts"), "utf8");
+      assert.match(graphql, /from "~\/gql"/);
+      assert.doesNotMatch(graphql, /@apollo\/client/);
+    });
+
     it("needs no install settings for the erxes shared libraries", async () => {
       assert.equal(existsSync(join(dir, ".npmrc")), false);
       if (pm === "pnpm") {
@@ -167,6 +192,12 @@ describe("backend stacks", () => {
 
       const api = await readJson<PackageJson>(join(dir, "api/package.json"));
       assert.deepEqual(api.scripts, runtimesFor({ backend })[runtimeFor(pm)]?.scripts);
+      assert.ok(api.scripts["schema:print"], "schema:print");
+      assert.ok(existsSync(join(dir, "api/src/print-schema.ts")));
+      assert.equal(
+        existsSync(join(dir, "api/src/resolvers.ts")),
+        backend === "nestjs",
+      );
       // Scripts run in api/ and must read the single .env at the repo root.
       for (const script of [api.scripts.dev, api.scripts.start]) {
         assert.match(script ?? "", /--env-file(-if-exists)?=\.\.\/\.env\b/, script);

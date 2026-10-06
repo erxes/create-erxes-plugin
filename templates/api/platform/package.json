@@ -10,6 +10,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@apollo/subgraph": "^2.15.1",
     "@types/node": "^22.18.0",
     "typescript": "^5.9.3"
   }

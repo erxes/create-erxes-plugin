@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -43,8 +44,9 @@ describe("generated projects install, type-check and build", { skip: !enabled },
   for (const [backend, pm] of cases) {
     it(`${backend} with ${pm}`, { timeout: 15 * 60_000 }, async () => {
       const dir = join(root, `${backend}-${pm}`);
+      const names = derivePluginNames(`e2e-${backend}`);
       await scaffold(dir, {
-        names: derivePluginNames(`e2e-${backend}`),
+        names,
         description: "End-to-end test plugin",
         backend,
         frontend: "react",
@@ -55,6 +57,9 @@ describe("generated projects install, type-check and build", { skip: !enabled },
 
       await run(pm, ["install"], dir);
       await run(pm, ["run", "check"], dir);
+      const sdl = await readFile(join(dir, "api/generated/schema.graphql"), "utf8");
+      assert.ok(sdl.includes(`${names.camel}Status`), "schema.graphql has the status field");
+      assert.ok(existsSync(join(dir, "ui/src/gql/graphql.ts")), "ui/src/gql/graphql.ts");
       await run(pm, ["run", "lint"], dir);
       await run(pm, ["run", "build"], dir);
     });

@@ -43,6 +43,7 @@ const NODE_SETUP: RuntimeSetup = {
     build: "tsc -p tsconfig.build.json",
     start: "node --env-file-if-exists=../.env dist/main.js",
     check: "tsc --noEmit",
+    "schema:print": "tsx src/print-schema.ts",
   },
   devDependencies: { "@types/node": "^22.20.4", tsx: "^4.23.15" },
   types: ["node"],
@@ -53,6 +54,7 @@ const BUN_SETUP: RuntimeSetup = {
     dev: "bun --env-file=../.env --watch src/main.ts",
     start: "bun --env-file=../.env src/main.ts",
     check: "tsc --noEmit",
+    "schema:print": "bun src/print-schema.ts",
   },
   devDependencies: { "@types/bun": "^1.4.2" },
   types: ["bun"],
@@ -63,7 +65,7 @@ export const BACKENDS = {
     integration: "platform",
     label: "Express via erxes-api-shared",
     hint: "erxes-api-shared startPlugin + tenant-scoped Mongoose models (Node.js)",
-    templates: ["api/commonjs", "api/platform"],
+    templates: ["api/commonjs", "api/platform", "api/schema-print"],
     runtimes: {
       node: NODE_SETUP,
     },
@@ -72,7 +74,7 @@ export const BACKENDS = {
     integration: "standalone",
     label: "Express",
     hint: "Express 5 + Apollo Server federated subgraph",
-    templates: ["api/standalone", "api/standalone-schema", "api/express"],
+    templates: ["api/standalone", "api/standalone-schema", "api/express", "api/schema-print"],
     runtimes: {
       node: NODE_SETUP,
       bun: BUN_SETUP,
@@ -82,7 +84,7 @@ export const BACKENDS = {
     integration: "standalone",
     label: "Fastify",
     hint: "Fastify + Apollo Server federated subgraph",
-    templates: ["api/standalone", "api/standalone-schema", "api/fastify"],
+    templates: ["api/standalone", "api/standalone-schema", "api/fastify", "api/schema-print"],
     runtimes: {
       node: NODE_SETUP,
     },
@@ -91,7 +93,7 @@ export const BACKENDS = {
     integration: "standalone",
     label: "Hono",
     hint: "Hono + GraphQL Yoga federated subgraph (Node.js or Bun)",
-    templates: ["api/standalone", "api/standalone-schema", "api/hono"],
+    templates: ["api/standalone", "api/standalone-schema", "api/hono", "api/schema-print"],
     runtimes: {
       node: NODE_SETUP,
       bun: BUN_SETUP,
@@ -101,7 +103,7 @@ export const BACKENDS = {
     integration: "standalone",
     label: "Elysia",
     hint: "Elysia + GraphQL Yoga federated subgraph (Bun)",
-    templates: ["api/standalone", "api/standalone-schema", "api/elysia"],
+    templates: ["api/standalone", "api/standalone-schema", "api/elysia", "api/schema-print"],
     runtimes: {
       bun: BUN_SETUP,
     },
@@ -118,6 +120,7 @@ export const BACKENDS = {
           build: "nest build",
           start: "node --env-file-if-exists=../.env dist/main.js",
           check: "tsc --noEmit",
+          "schema:print": "nest build && node dist/print-schema.js",
         },
         devDependencies: { "@nestjs/cli": "^12.0.8", "@types/node": "^22.20.4" },
         types: ["node"],

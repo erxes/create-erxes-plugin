@@ -24,7 +24,7 @@ import {
 import { PageHeader } from "ui-modules";
 import { Link } from "react-router";
 import manifest from "../../../erxes.json" with { type: "json" };
-import { STATUS_QUERY, type StatusQuery } from "../graphql";
+import { STATUS_QUERY } from "../graphql";
 
 const { path } = manifest.ui;
 
@@ -47,7 +47,7 @@ const StatusRow = ({ label, children }: { label: string; children: ReactNode }) 
 );
 
 const ConnectionCard = () => {
-  const { data, loading, error, refetch } = useQuery<StatusQuery>(STATUS_QUERY);
+  const { data, loading, error, refetch } = useQuery(STATUS_QUERY);
   const status = data?.__camel__Status;
 
   const pending = (

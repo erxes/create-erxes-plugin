@@ -10,6 +10,7 @@ is the single source of the plugin's identity and ports.
 
 - `__pm__ install`
 - `__pmRun__ dev:api` / `__pmRun__ dev:ui`
+- `__pmRun__ codegen`
 - `__pmRun__ check`, `__pmRun__ lint`, `__pmRun__ build`, `__pmRun__ fmt`
 - `docker build --build-arg UI_ENTRY_URL=<remoteEntry.js URL> -t <image> .`
 
@@ -35,6 +36,7 @@ __apiContracts__
   `ui/src/widgets/NotificationWidget.tsx` exports `NotificationWidget` for the
   `./notificationWidget` inbox expose. Keep the expose names in
   `ui/rspack.config.ts` in sync with `erxes.json`.
+- __schemaPrint__.
 - `erxes-ui`, `ui-modules` and `erxes-api-shared` are the npm packages
   `@erxes/ui`, `@erxes/ui-modules` and `@erxes/api-shared`, installed under
   those import names with npm aliases; keep them on the versions your erxes
@@ -59,3 +61,12 @@ __apiContracts__
   security boundary.
 - Every query has loading, error and empty states; refetch or update the
   Apollo cache after each mutation.
+- GraphQL documents are `gql()` from `~/gql` — generated into `ui/src/gql/`
+  by `codegen` from `api/generated/schema.graphql` — written as a function
+  call on a static string with no `${}` interpolation.
+- Apollo hooks infer their types from the document: no `useQuery<T>` or
+  `useMutation<T>` generics and no handwritten response interfaces; derive
+  types from the generated `*Query` types.
+- `api/generated` and `ui/src/gql` are gitignored; `check`, `build` and
+  `dev:ui` run `codegen` first. Run `__pmRun__ codegen` after changing a
+  document or the schema.

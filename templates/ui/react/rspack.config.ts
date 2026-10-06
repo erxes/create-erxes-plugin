@@ -1,5 +1,6 @@
 import { ModuleFederationPlugin } from "@module-federation/enhanced/rspack";
 import { defineConfig } from "@rspack/cli";
+import { fileURLToPath } from "node:url";
 import manifest from "../erxes.json" with { type: "json" };
 
 const { name, remote, port } = manifest.ui;
@@ -22,7 +23,10 @@ const hostShared = [
 export default defineConfig({
   entry: {},
   output: { publicPath: "auto", uniqueName: remote, clean: true },
-  resolve: { extensions: [".tsx", ".ts", ".js"] },
+  resolve: {
+    extensions: [".tsx", ".ts", ".js"],
+    alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
   module: {
     rules: [
       {
