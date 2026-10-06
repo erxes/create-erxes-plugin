@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { type ErxesManifest, type ProjectOptions, runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
@@ -104,6 +104,38 @@ for (const pm of PACKAGE_MANAGERS) {
       assert.equal(pkg.scripts["dev:api"], filter);
       assert.equal(existsSync(join(dir, "pnpm-workspace.yaml")), pm === "pnpm");
       assert.equal(pkg.workspaces === undefined, pm === "pnpm");
+    });
+
+    it("hoists pnpm installs so erxes-ui emits complete declarations", async () => {
+      const npmrc = join(dir, ".npmrc");
+      assert.equal(existsSync(npmrc), pm === "pnpm");
+      if (pm === "pnpm") {
+        assert.match(await readFile(npmrc, "utf8"), /^node-linker=hoisted$/m);
+        assert.match(
+          await readFile(join(dir, "Dockerfile"), "utf8"),
+          /COPY package\.json .*\.npmrc/,
+        );
+      }
+    });
+
+    it("points the erxes shared libraries at GitHub (pnpm) or a sibling clone", async () => {
+      const ui = await readJson<PackageJson>(join(dir, "ui/package.json"));
+      for (const [name, library] of [
+        ["erxes-ui", "frontend/libs/erxes-ui"],
+        ["ui-modules", "frontend/libs/ui-modules"],
+      ] as const) {
+        const spec = ui.devDependencies[name] ?? "";
+        if (pm === "pnpm") {
+          assert.equal(spec, `github:erxes/erxes#main&path:${library}`);
+        } else {
+          assert.ok(spec.startsWith("file:"), spec);
+          // file: specs resolve from ui/; the clone sits next to the plugin root.
+          assert.equal(
+            resolve(dir, "ui", spec.slice("file:".length)),
+            resolve(dir, "..", "erxes", library),
+          );
+        }
+      }
     });
   });
 }

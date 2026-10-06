@@ -74,11 +74,16 @@ Notes:
   `erxes-ui`/`ui-modules` as Module Federation singletons at runtime, so a
   type/runtime mismatch surfaces as broken imports, not as a helpful error.
 - pnpm resolves `&path:` monorepo subdirectories in git deps. The other
-  package managers get a `file:../erxes/...` fallback instead — adjust the
-  path if your erxes clone does not sit next to this repo. `file:` specs do
-  not run `prepare`, so run `pnpm install` in the erxes clone once first —
-  its workspace install builds each library's `dist/` declarations and
-  bundles.
+  package managers get a `file:../../erxes/...` fallback instead (relative to
+  `api/` and `ui/`, so it points at an `erxes` clone next to this repo) —
+  adjust the path if your clone lives elsewhere. `file:` specs do not run
+  `prepare`, so run `pnpm install` in the erxes clone once first — its
+  workspace install builds each library's `dist/` declarations and bundles.
+- pnpm installs use `node-linker=hoisted` (`.npmrc`). erxes-ui emits its
+  declarations with `tsc` during `prepare`; in pnpm's default isolated layout
+  its transitive deps can't be named, `tsc` skips those files (TS2742) and
+  exports like `Sidebar` disappear from `dist/`. Keep the setting until
+  erxes-ui annotates those exports.
 - `erxes-api-shared` runs its `prepare` (preconstruct build) on install, which
   is what produces its `dist/` bundles; `erxes-ui` and `ui-modules` emit
   `dist/` type declarations the same way. With `dist/` present, `tsc`

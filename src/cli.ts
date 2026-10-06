@@ -1,12 +1,12 @@
 import { existsSync, readdirSync } from "node:fs";
-import { basename, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import * as p from "@clack/prompts";
 import { Command, Option } from "commander";
 import { getUserAgent } from "package-manager-detector/detect";
 import { x } from "tinyexec";
 import { type ProjectOptions, runtimesFor } from "./generated.ts";
 import { derivePluginNames, validatePluginName } from "./naming.ts";
-import { scaffold } from "./scaffold.ts";
+import { ERXES_CHECKOUT, erxesLibraries, scaffold } from "./scaffold.ts";
 import { VERSION } from "./templates.generated.ts";
 import {
   BACKENDS,
@@ -173,6 +173,14 @@ const askPackageManager = async (cli: CliOptions): Promise<PackageManager> => {
   );
 };
 
+/** Libraries a non-pnpm install would resolve from the sibling erxes clone but cannot find. */
+const missingErxesLibraries = (targetDir: string, options: ProjectOptions) =>
+  options.packageManager === "pnpm"
+    ? []
+    : erxesLibraries(options).filter(
+        (library) => !existsSync(join(dirname(targetDir), ERXES_CHECKOUT, library, "package.json")),
+      );
+
 const run = async (command: string, args: string[], cwd: string) => {
   const result = await x(command, args, { nodeOptions: { cwd }, throwOnError: false });
   return { ok: result.exitCode === 0, output: `${result.stdout}${result.stderr}`.trim() };
@@ -236,16 +244,28 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     if (!git.ok) p.log.warn(`git init failed: ${git.output}`);
   }
 
+  let installFailure: string | undefined;
   if (install) {
-    spin.start(`Installing dependencies with ${packageManager}`);
-    const result = await run(packageManager, ["install"], targetDir);
-    if (result.ok) {
-      // Token lengths shift Markdown tables and generated JSON; normalize them.
-      await run(packageManager, ["run", "fmt"], targetDir);
-      spin.stop("Dependencies installed");
+    const missing = missingErxesLibraries(targetDir, options);
+    if (missing.length) {
+      const fromCwd = relative(process.cwd(), join(dirname(targetDir), ERXES_CHECKOUT));
+      const checkout = fromCwd.startsWith("..") ? fromCwd : `./${fromCwd}`;
+      installFailure = [
+        `${packageManager} installs the erxes shared libraries from a local erxes clone, but ${checkout} is missing ${missing.join(", ")}.`,
+        `Clone erxes/erxes to ${checkout}, run pnpm install there, then run ${packageManager} install in the plugin — or use --pm pnpm, which installs them from GitHub.`,
+      ].join("\n");
     } else {
-      spin.error(`${packageManager} install failed`);
-      p.log.message(result.output);
+      spin.start(`Installing dependencies with ${packageManager}`);
+      const result = await run(packageManager, ["install"], targetDir);
+      if (result.ok) {
+        // Token lengths shift Markdown tables and generated JSON; normalize them.
+        await run(packageManager, ["run", "fmt"], targetDir);
+        spin.stop("Dependencies installed");
+      } else {
+        spin.error(`${packageManager} install failed`);
+        p.log.message(result.output);
+        installFailure = `${packageManager} install failed; see the output above.`;
+      }
     }
   }
 
@@ -255,7 +275,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
   p.note(
     [
       ...(cd ? [`cd ${cd}`] : []),
-      ...(install ? [] : [`${packageManager} install`]),
+      ...(install && !installFailure ? [] : [`${packageManager} install`]),
       "cp api/.env.example api/.env",
       runScript("dev:api"),
       runScript("dev:ui"),
@@ -264,6 +284,13 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     ].join("\n"),
     "Next steps",
   );
+
+  if (installFailure) {
+    p.log.error(installFailure);
+    p.outro(`Plugin "${name}" was created, but its dependencies are not installed.`);
+    process.exitCode = 1;
+    return;
+  }
   p.outro(`Plugin "${name}" is ready. See README.md.`);
 };
 

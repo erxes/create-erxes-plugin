@@ -19,6 +19,16 @@ const DOTFILES: Record<string, string> = {
   "_env.example": ".env.example",
 };
 
+/** Directory name of the erxes clone non-pnpm package managers expect next to the plugin. */
+export const ERXES_CHECKOUT = "erxes";
+
+/** Library paths inside the erxes monorepo a generated plugin depends on. */
+export const erxesLibraries = (options: Pick<ProjectOptions, "backend">) => [
+  "frontend/libs/erxes-ui",
+  "frontend/libs/ui-modules",
+  ...(BACKENDS[options.backend].integration === "platform" ? ["backend/erxes-api-shared"] : []),
+];
+
 const applyTokens = (text: string, tokens: [string, string][]) =>
   tokens.reduce((result, [token, value]) => result.replaceAll(token, value), text);
 
@@ -33,11 +43,12 @@ const tokensFor = ({
 }: ProjectOptions): [string, string][] => {
   // pnpm resolves monorepo subdirectories in git deps; the other package
   // managers get a sibling-checkout fallback (erxes must be cloned next to the
-  // plugin to run its dev stack anyway).
+  // plugin to run its dev stack anyway). The specs live in api/ and ui/, so
+  // the plugin root is one more level up.
   const erxesDep = (path: string) =>
     packageManager === "pnpm"
       ? `github:erxes/erxes#${erxesRef}&path:${path}`
-      : `file:../erxes/${path}`;
+      : `file:../../${ERXES_CHECKOUT}/${path}`;
 
   const tokens: [string, string][] = [
     ["__pmRun__", packageManager === "yarn" ? "yarn" : `${packageManager} run`],

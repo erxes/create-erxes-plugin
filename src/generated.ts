@@ -110,6 +110,11 @@ export const createPackageManagerFiles = (o: ProjectOptions): Record<string, str
         '  - "erxes-api-shared"\n' +
         '  - "erxes-ui"\n' +
         '  - "ui-modules"\n',
+      // erxes-ui's prepare emits dist/*.d.ts with tsc. In pnpm's isolated
+      // layout its transitive deps (@radix-ui/*, …) are not resolvable by
+      // name, tsc hits TS2742 and silently skips those files' declarations
+      // (Sidebar, NavigationMenu…). A hoisted layout keeps them nameable.
+      ".npmrc": "node-linker=hoisted\n",
     };
   }
   if (o.packageManager === "yarn") {
