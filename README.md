@@ -37,11 +37,16 @@ release's `SHA256SUMS`. `create-erxes-plugin --version` prints the version.
 Or via a package manager (requires Node.js ≥ 22.12):
 
 ```sh
-npx create-erxes-plugin inventory
+npm create @erxes/plugin@latest inventory
 # or
-pnpm create erxes-plugin inventory
-bun create erxes-plugin inventory
+pnpm create @erxes/plugin inventory
+yarn create @erxes/plugin inventory
+bun create @erxes/plugin inventory
+npx @erxes/create-plugin inventory
 ```
+
+The npm package is [`@erxes/create-plugin`](https://www.npmjs.com/package/@erxes/create-plugin);
+the command it installs is `create-erxes-plugin`.
 
 The CLI asks for anything not passed as a flag:
 
