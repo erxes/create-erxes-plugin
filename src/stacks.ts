@@ -42,7 +42,7 @@ const NODE_SETUP: RuntimeSetup = {
     start: "node --env-file-if-exists=.env dist/main.js",
     check: "tsc --noEmit",
   },
-  devDependencies: { "@types/node": "^22.18.0", tsx: "^4.23.15" },
+  devDependencies: { "@types/node": "^22.20.4", tsx: "^4.23.15" },
   types: ["node"],
 };
 
@@ -117,7 +117,7 @@ export const BACKENDS = {
           start: "node --env-file-if-exists=.env dist/main.js",
           check: "tsc --noEmit",
         },
-        devDependencies: { "@nestjs/cli": "^12.0.8", "@types/node": "^22.18.0" },
+        devDependencies: { "@nestjs/cli": "^12.0.8", "@types/node": "^22.20.4" },
         types: ["node"],
       },
     },

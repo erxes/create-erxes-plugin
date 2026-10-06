@@ -34,7 +34,7 @@ and adds it to the user PATH. Release assets are
 friends) and `create-erxes-plugin-windows-x64.zip`, verified against the
 release's `SHA256SUMS`. `create-erxes-plugin --version` prints the version.
 
-Or via a package manager (requires Node.js ≥ 20.12):
+Or via a package manager (requires Node.js ≥ 22.12):
 
 ```sh
 npx create-erxes-plugin inventory

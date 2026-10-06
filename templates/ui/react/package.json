@@ -9,7 +9,7 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@tabler/icons-react": "^3.34.0"
+    "@tabler/icons-react": "^3.48.0"
   },
   "devDependencies": {
     "@apollo/client": "^3.14.1",
