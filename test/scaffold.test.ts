@@ -4,10 +4,17 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import type { ProjectOptions } from "../src/generated.ts";
+import { type ErxesManifest, type ProjectOptions, runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
 import { scaffold } from "../src/scaffold.ts";
-import { PACKAGE_MANAGERS, type PackageManager } from "../src/stacks.ts";
+import {
+  BACKENDS,
+  type Backend,
+  PACKAGE_MANAGERS,
+  type PackageManager,
+  runtimeFor,
+} from "../src/stacks.ts";
+import { TEMPLATES } from "../src/templates.generated.ts";
 
 const optionsFor = (packageManager: PackageManager): ProjectOptions => ({
   names: derivePluginNames("erxes-agent-v2"),
@@ -100,3 +107,51 @@ for (const pm of PACKAGE_MANAGERS) {
     });
   });
 }
+
+// elysia is Bun-only; every other stack runs on Node.js.
+const STACK_PM: Record<Backend, PackageManager> = {
+  platform: "pnpm",
+  express: "pnpm",
+  fastify: "pnpm",
+  hono: "pnpm",
+  elysia: "bun",
+  nestjs: "pnpm",
+};
+
+describe("backend stacks", () => {
+  for (const backend of Object.keys(BACKENDS) as Backend[]) {
+    it(`${backend}: every template layer exists`, () => {
+      for (const layer of BACKENDS[backend].templates) {
+        assert.ok(
+          Object.keys(TEMPLATES).some((key) => key.startsWith(`${layer}/`)),
+          layer,
+        );
+      }
+    });
+
+    it(`${backend}: scaffolds and configures the API`, async () => {
+      const pm = STACK_PM[backend];
+      const dir = join(root, `stack-${backend}`);
+      await scaffold(dir, { ...optionsFor(pm), backend });
+
+      for (const file of await listFiles(dir)) {
+        assert.doesNotMatch(await readFile(file, "utf8"), /__[a-zA-Z]+__/, file);
+      }
+
+      const standalone = BACKENDS[backend].integration === "standalone";
+      assert.equal(existsSync(join(dir, "api/src/gateway.ts")), standalone);
+      assert.equal(existsSync(join(dir, "api/src/context.ts")), standalone);
+      // NestJS is code-first; the other stacks carry the SDL template.
+      assert.equal(
+        existsSync(join(dir, "api/src/graphql/schema.ts")),
+        backend !== "nestjs",
+      );
+
+      const manifest = await readJson<ErxesManifest>(join(dir, "erxes.json"));
+      assert.equal(manifest.api.framework, backend);
+
+      const api = await readJson<PackageJson>(join(dir, "api/package.json"));
+      assert.deepEqual(api.scripts, runtimesFor({ backend })[runtimeFor(pm)]?.scripts);
+    });
+  }
+});

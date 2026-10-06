@@ -51,10 +51,11 @@ The CLI asks for anything not passed as a flag:
 | `-n, --name <name>`        | directory name                  |
 | `-t, --title <title>`      | name in Title Case              |
 | `-d, --description <text>` | `<title> plugin for erxes`      |
-| `-b, --backend <backend>`  | `express` (only option for now) |
+| `-b, --backend <backend>`  | `platform` (erxes-api-shared `startPlugin`, Node.js) or a standalone framework: `express`, `fastify`, `hono`, `elysia` (Bun only), `nestjs`; asked interactively |
 | `--pm <npm\|pnpm\|yarn\|bun>` | the package manager running the CLI |
 | `--api-port <port>`        | `3399`                          |
 | `--ui-port <port>`         | `3099`                          |
+| `--erxes-ref <ref>`        | `main` — git ref of erxes/erxes for the shared-library deps |
 | `--no-install`, `--no-git` | install and `git init` run      |
 | `-y, --yes`                | accept defaults                 |
 
@@ -65,14 +66,17 @@ Plugin names are lowercase words separated by single dashes
 
 ```
 erxes.json        plugin identity and ports, read by api/ and ui/
-api/              Express 5 + Apollo Server federated subgraph (Node.js, or Bun with --pm bun)
+api/              platform stack: erxes-api-shared startPlugin + tenant Mongoose models (Node.js)
+                  standalone stacks: Express, Fastify, Hono or Elysia (Bun) subgraph APIs,
+                  or NestJS code-first federation (Node.js)
 ui/               React 18 Rspack Module Federation remote, prefixed Tailwind CSS
 Dockerfile        API-only image for the chosen package manager
 README.md, AGENTS.md, docs/erxes-integration.md
 ```
 
 The generated plugin registers with erxes exactly like erxes-api-shared
-`joinErxesGateway` and follows the core-ui remote contract. See
+`joinErxesGateway` — from `api/src/gateway.ts` for `express`, via `startPlugin`
+for `platform` — and follows the core-ui remote contract. See
 `templates/base/docs/erxes-integration.md`.
 
 ## Layout
@@ -97,10 +101,13 @@ npm drops them from published packages.
 ### Adding a backend
 
 1. Add `templates/api/<backend>/` with `package.json`, `tsconfig.json` and
-   `src/` that serve `GET /health` and `/graphql`, build the context from the
-   gateway headers, and call `joinErxesGateway()` from `src/gateway.ts`.
-2. Register it in `BACKENDS` (`src/stacks.ts`) with its scripts and dev
-   dependencies per runtime (`node`, `bun`).
+   `src/` that serve `GET /health` and `/graphql`. A stack lists its layers in
+   `templates` (`src/stacks.ts`) and they are copied in order into `api/`;
+   `api/standalone` already provides `gateway.ts` (the local `joinErxesGateway`
+   mirror) and the header-agnostic `context.ts`, and `api/standalone-schema`
+   the prefixed status subgraph.
+2. Register it in `BACKENDS` with its `integration`, label/hint, `templates`
+   layers, and scripts + dev dependencies per runtime (`node`, `bun`).
 
 ## Develop
 
