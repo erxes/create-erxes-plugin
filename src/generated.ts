@@ -47,7 +47,8 @@ export const createManifest = (o: ProjectOptions): ErxesManifest => ({
   ui: {
     framework: o.frontend,
     port: o.uiPort,
-    name: o.names.id,
+    // Permission checks use the same public identity as API metadata/Redis.
+    name: o.names.name,
     remote: o.names.remote,
     path: o.names.name,
   },
@@ -57,7 +58,57 @@ export const createManifest = (o: ProjectOptions): ErxesManifest => ({
 export const runtimesFor = (o: Pick<ProjectOptions, "backend">): BackendStack["runtimes"] =>
   BACKENDS[o.backend].runtimes;
 
+// Keep React shared by the host and all transitive UI dependencies on the
+// tested React 18 release, including npm's automatic peer installation.
+const REACT_COHORT = { react: "18.3.1", "react-dom": "18.3.1" };
+
 const LINT_DEPENDENCIES = { oxfmt: "^0.71.0", oxlint: "^1.86.0" };
+
+// The platform 3.3.2 dependency graph was tested with this telemetry cohort.
+// api-shared's floating Sentry dependencies otherwise select OTel API 1.10,
+// which violates the trace SDK's <1.10 peer range. Keep real peer checks on.
+const PLATFORM_TELEMETRY = {
+  "@sentry/node": "10.76.2",
+  "@opentelemetry/api": "1.9.1",
+  "@opentelemetry/instrumentation": "0.220.0",
+  "@opentelemetry/sdk-trace-base": "2.12.0",
+};
+
+// Published packages omit providers needed by their children. These exact
+// version metadata repairs add real dependencies/peers, never optionalize them.
+// Recheck Yarn's peer-requirements report when updating any affected package.
+const YARN_UI_EXTENSIONS = {
+  "@erxes/ui@3.3.4": { peerDependencies: { "react-is": "^18.3.1", typescript: "^5.9.3" } },
+  "@erxes/ui-modules@3.3.4": { peerDependencies: { "react-is": "^18.3.1" } },
+  "@maily-to/core@0.3.7": {
+    dependencies: {
+      "@tiptap/extension-code-block": "2.27.3",
+      "prosemirror-model": "1.25.12",
+      "prosemirror-state": "1.4.4",
+      "prosemirror-view": "1.42.6",
+      "y-protocols": "1.0.7",
+      yjs: "13.6.33",
+    },
+    peerDependencies: { "react-dom": "^18.0.0 || ^19.0.0" },
+  },
+  "@maily-to/render@0.2.3": { peerDependencies: { "react-dom": "^18.0.0 || ^19.0.0" } },
+  "@react-email/components@0.5.7": { peerDependencies: { "react-dom": "^18.0.0 || ^19.0.0" } },
+  "@module-federation/enhanced@0.6.6": {
+    peerDependencies: { react: ">=16.9.0", "react-dom": ">=16.9.0" },
+  },
+  "@module-federation/enhanced@2.9.2": {
+    peerDependencies: { "@rspack/core": "^0.7.0 || ^1.0.0 || ^2.0.0-0" },
+  },
+  "@module-federation/cli@2.9.2": { peerDependencies: { typescript: "^5.9.3" } },
+  "@module-federation/manifest@0.6.6": { peerDependencies: { typescript: "^5.9.3" } },
+  "@module-federation/manifest@2.9.2": { peerDependencies: { typescript: "^5.9.3" } },
+};
+
+const YARN_PLATFORM_EXTENSIONS = {
+  "@azure/storage-common@12.5.0": { dependencies: { "@azure/core-client": "1.11.1" } },
+  "@erxes/api-shared@3.3.4": { peerDependencies: { typescript: "^5.9.3" } },
+  "@sentry/node@10.76.2": { dependencies: { "@opentelemetry/core": "2.12.0" } },
+};
 
 /** Runs a script at the workspace root (yarn drops the extra `run`). */
 const rootRun = (pm: PackageManager, script: string) =>
@@ -84,16 +135,31 @@ export const createRootPackageJson = (o: ProjectOptions) => {
     scripts: {
       "dev:api": workspaceRun(pm, api, "dev"),
       "dev:ui": `${codegen} && ${workspaceRun(pm, ui, "dev")}`,
-      codegen: [
-        workspaceRun(pm, api, "schema:print"),
-        workspaceRun(pm, ui, "codegen"),
-      ].join(" && "),
+      codegen: [workspaceRun(pm, api, "schema:print"), workspaceRun(pm, ui, "codegen")].join(
+        " && ",
+      ),
       build: build.join(" && "),
       check: [codegen, workspaceRun(pm, api, "check"), workspaceRun(pm, ui, "check")].join(" && "),
       lint: "oxlint",
       fmt: "oxfmt",
     },
     devDependencies: LINT_DEPENDENCIES,
+    ...(pm === "pnpm"
+      ? {
+          pnpm: {
+            overrides: { ...REACT_COHORT, ...(o.backend === "platform" ? PLATFORM_TELEMETRY : {}) },
+          },
+        }
+      : pm === "yarn"
+        ? {
+            resolutions: {
+              ...REACT_COHORT,
+              ...(o.backend === "platform" ? PLATFORM_TELEMETRY : {}),
+            },
+          }
+        : {
+            overrides: { ...REACT_COHORT, ...(o.backend === "platform" ? PLATFORM_TELEMETRY : {}) },
+          }),
     ...((pm === "pnpm" || pm === "yarn") && o.packageManagerVersion
       ? { packageManager: `${pm}@${o.packageManagerVersion}` }
       : {}),
@@ -109,7 +175,19 @@ export const createPackageManagerFiles = (o: ProjectOptions): Record<string, str
     return { "pnpm-workspace.yaml": "packages:\n  - api\n  - ui\n" };
   }
   if (o.packageManager === "yarn") {
-    return { ".yarnrc.yml": "nodeLinker: node-modules\n" };
+    return {
+      ".yarnrc.yml": `${JSON.stringify(
+        {
+          nodeLinker: "node-modules",
+          packageExtensions: {
+            ...YARN_UI_EXTENSIONS,
+            ...(o.backend === "platform" ? YARN_PLATFORM_EXTENSIONS : {}),
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    };
   }
   return {};
 };

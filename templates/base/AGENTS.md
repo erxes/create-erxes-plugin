@@ -22,7 +22,8 @@ See `docs/erxes-integration.md`. In short:
 
 - `erxes.json` `name` (`__name__`) drives Redis keys, `ENABLED_PLUGINS`, the
   docker host `plugin-__name__-api` and the CDN folder `__name___ui`.
-- `ui.name` (`__id__`) is `CONFIG.name` and the page expose `./__id__`;
+- `ui.name` (`__name__`) is `CONFIG.name`, the page expose `./__name__`,
+  and the API permission identity. Keep the public name, including dashes;
   `ui.remote` (`__remote__`) is what core-api derives from `name`.
 - Change names only in `erxes.json`, and only all together.
 
@@ -32,15 +33,15 @@ __apiContracts__
 - Prefix every GraphQL type with `__Pascal__` and every operation and root
   field with `__camel__`; the supergraph is shared by all plugins.
 - `ui/src/config.tsx` exports `CONFIG`; `ui/src/Main.tsx` exports `__Pascal__`;
-  `ui/src/Settings.tsx` exports `__Pascal__Settings`;
-  `ui/src/widgets/NotificationWidget.tsx` exports `NotificationWidget` for the
-  `./notificationWidget` inbox expose. Keep the expose names in
-  `ui/rspack.config.ts` in sync with `erxes.json`.
+  the only baseline exposes are `./config` and `./__name__`. The plugin owns
+  `/__name__/settings` and its sidebar through `AppLayout`; the host does not
+  mount a separate settings expose. Keep `ui/rspack.config.ts` in sync with
+  `erxes.json`. Add notification widgets only when implementing notifications.
 - __schemaPrint__.
 - `erxes-ui`, `ui-modules` and `erxes-api-shared` are the npm packages
   `@erxes/ui`, `@erxes/ui-modules` and `@erxes/api-shared`, installed under
-  those import names with npm aliases; keep them on the versions your erxes
-  deployment pins.
+  those import names with exact npm aliases. The tested cohort is
+  `__erxesRelease__`; update all three together and validate the deployment.
 
 ## Rules
 
@@ -58,7 +59,11 @@ __apiContracts__
 - UI classes use the `__twPrefix__:` Tailwind prefix and the host tokens
   (`bg-background`, `text-muted-foreground`, `border-border`, …).
 - Authorize in the API using `context.user`; the UI route guard is not a
-  security boundary.
+  security boundary. Platform data resolvers must also await
+  `checkPermission(action)` and use tenant-bound models and bounded pagination.
+  Forwarded identity/tenant headers are trusted gateway assertions, not
+  authentication: keep API ports private and strip client identity headers at
+  the public ingress. See the integration docs before deployment.
 - Every query has loading, error and empty states; refetch or update the
   Apollo cache after each mutation.
 - GraphQL documents are `gql()` from `~/gql` — generated into `ui/src/gql/`

@@ -8,8 +8,8 @@
 
   The @theme block below mirrors the erxes-ui theme contract
   (erxes-ui/src/theme.css): it maps utilities to the design tokens the host
-  defines on :root and .dark. Replace it with `@import "erxes-ui/theme.css";`
-  once erxes-ui is published to npm.
+  defines on :root and .dark. Keep these scoped tokens rather than importing
+  the host's global stylesheet a second time.
 */
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme) prefix(__twPrefix__);

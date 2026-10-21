@@ -59,6 +59,14 @@ const validatePort = (value: string | undefined) => {
 
 const isEmptyDir = (dir: string) => !existsSync(dir) || readdirSync(dir).length === 0;
 
+// Next steps target a POSIX shell on Unix and PowerShell on Windows. Single
+// quotes keep spaces and shell metacharacters literal in both, with different
+// escaping for an apostrophe inside the path.
+const changeDirectoryCommand = (path: string) =>
+  process.platform === "win32"
+    ? `Set-Location -LiteralPath '${path.replaceAll("'", "''")}'`
+    : `cd -- '${path.replaceAll("'", "'\\''")}'`;
+
 const detectPackageManager = (): PackageManager => {
   const agent = getUserAgent();
   return agent && isPackageManager(agent) ? agent : "npm";
@@ -254,7 +262,7 @@ const main = async (directoryArg: string | undefined, cli: CliOptions) => {
     packageManager === "npm" ? `npm run ${script}` : `${packageManager} run ${script}`;
   p.note(
     [
-      ...(cd ? [`cd ${cd}`] : []),
+      ...(cd ? [changeDirectoryCommand(cd)] : []),
       ...(install && !installFailure ? [] : [`${packageManager} install`]),
       "cp .env.example .env",
       runScript("dev:api"),

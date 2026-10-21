@@ -1,6 +1,8 @@
 import { gql } from "graphql-tag";
+import { GraphQLError } from "graphql";
 import { manifest } from "../config.ts";
 import type { Context } from "../connectionResolvers.ts";
+import { SAMPLE_READ } from "../permissions.ts";
 
 // Every type and operation is prefixed with the plugin name: the gateway
 // composes all plugins into one supergraph, so names must be unique across it.
@@ -23,7 +25,7 @@ export const typeDefs = gql`
 
   type Query {
     __camel__Status: __Pascal__Status!
-    __camel__Samples: [__Pascal__Sample!]!
+    __camel__Samples(limit: Int = 20, offset: Int = 0): [__Pascal__Sample!]!
   }
 `;
 
@@ -36,10 +38,28 @@ export const resolvers = {
       userId: user?._id ?? null,
       userEmail: user?.email ?? null,
     }),
-    __camel__Samples: async (_parent: unknown, _args: unknown, { models }: Context) =>
-      (await models.Samples.list()).map((sample) => ({
+    __camel__Samples: async (
+      _parent: unknown,
+      { limit = 20, offset = 0 }: { limit?: number; offset?: number },
+      { models, user, subdomain, checkPermission }: Context,
+    ) => {
+      if (!user?._id) {
+        throw new GraphQLError("Login required", { extensions: { code: "UNAUTHENTICATED" } });
+      }
+      if (!subdomain) {
+        throw new GraphQLError("Tenant required", { extensions: { code: "FORBIDDEN" } });
+      }
+      await checkPermission(SAMPLE_READ);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100 ||
+          !Number.isInteger(offset) || offset < 0 || offset > 10_000) {
+        throw new GraphQLError("Use limit 1–100 and offset 0–10000", {
+          extensions: { code: "BAD_USER_INPUT" },
+        });
+      }
+      return (await models.Samples.list({ limit, offset })).map((sample) => ({
         ...sample,
         createdAt: sample.createdAt?.toISOString?.() ?? null,
-      })),
+      }));
+    },
   },
 };

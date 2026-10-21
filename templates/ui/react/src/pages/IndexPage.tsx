@@ -1,7 +1,6 @@
 import { useQuery } from "@apollo/client";
 import type { ComponentType, ReactNode } from "react";
 import {
-  IconBell,
   IconBook,
   IconDatabase,
   IconExternalLink,
@@ -25,6 +24,7 @@ import { PageHeader } from "ui-modules";
 import { Link } from "react-router";
 import manifest from "../../../erxes.json" with { type: "json" };
 import { STATUS_QUERY } from "../graphql";
+__samplePanelImport__
 
 const { path } = manifest.ui;
 
@@ -160,13 +160,6 @@ const STEPS = [
       "Replace this overview with your module: lists with RecordTable, forms with Form, details in a Sheet.",
     code: "ui/src/pages/IndexPage.tsx",
   },
-  {
-    icon: IconBell,
-    title: "Notify people",
-    description:
-      "Notifications your API sends open in the host inbox and render through this widget.",
-    code: "ui/src/widgets/NotificationWidget.tsx",
-  },
 ];
 
 export const IndexPage = () => (
@@ -193,7 +186,7 @@ export const IndexPage = () => (
       </PageHeader.Start>
       <PageHeader.End>
         <Button variant="outline" asChild>
-          <Link to={`/settings/${path}`}>
+          <Link to={`/${path}/settings`}>
             <IconSettings />
             Settings
           </Link>
@@ -220,7 +213,7 @@ export const IndexPage = () => (
               </p>
               <div className="__twPrefix__:flex __twPrefix__:flex-wrap __twPrefix__:gap-2">
                 <Button asChild>
-                  <Link to={`/settings/${path}`}>
+                  <Link to={`/${path}/settings`}>
                     <IconSettings />
                     Open settings
                   </Link>
@@ -241,7 +234,8 @@ export const IndexPage = () => (
             <ConnectionCard />
           </div>
         </section>
-        <div className="__twPrefix__:grid __twPrefix__:gap-4 __twPrefix__:md:grid-cols-3">
+        __samplePanel__
+        <div className="__twPrefix__:grid __twPrefix__:gap-4 __twPrefix__:md:grid-cols-2">
           {STEPS.map((step) => (
             <StepCard key={step.title} {...step} />
           ))}

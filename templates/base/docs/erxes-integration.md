@@ -1,7 +1,8 @@
 # How __name__ plugs into erxes
 
-erxes discovers this plugin at runtime. Nothing in the erxes repository
-references it except the `ENABLED_PLUGINS` entry.
+erxes discovers this plugin at runtime through the same Redis used by the API.
+Enable `__name__` in `ENABLED_PLUGINS` on the gateway and core-api, and restart
+them. No monorepo workspace or source import is required.
 
 ## Names
 
@@ -10,10 +11,20 @@ All of these come from `erxes.json`. They must stay consistent.
 | Name           | Value                      | Used by                                                        |
 | -------------- | -------------------------- | -------------------------------------------------------------- |
 | `name`         | `__name__`                 | Redis keys, `ENABLED_PLUGINS`, CDN folder, docker host         |
-| `ui.name`      | `__id__`                   | `CONFIG.name`, page expose `./__id__`, permission checks       |
+| `ui.name`      | `__name__`                 | `CONFIG.name`, permissions, page expose `./__name__`                          |
 | `ui.remote`    | `__remote__`               | Module Federation container (core-api derives it from `name`)  |
 | `ui.path`      | `__name__`                 | Route `/__name__/*` in core-ui                                 |
 | GraphQL prefix | `__camel__` / `__Pascal__` | Operation, field and type names (unique across the supergraph) |
+
+**Dashed names:** `inventory` maps to `inventory_ui` / `./inventory`;
+`inventory-tools` maps to the container `inventory_tools_ui`, page expose
+`./inventory-tools`, and page export `InventoryTools`. Its public identity
+stays `inventory-tools` in `name`, `ui.name`, `CONFIG.name` and API
+`permissions.plugin`; never substitute `inventory_tools` in permission checks.
+The host must preserve the discovery remote key separately from CONFIG.name
+and resolve dashed module names to PascalCase exports. Those host fixes are
+required for dashed plugins; use a single-word name on older hosts. API
+authorization remains required regardless of host route guards.
 
 ## API registration
 
@@ -27,24 +38,21 @@ The gateway only composes plugins listed in its `ENABLED_PLUGINS`.
    for each enabled plugin. `entry` is the registered `uiEntry`, or
    `https://plugins.erxes.io/<releaseVersion>/__name___ui/remoteEntry.js`.
 2. core-ui loads `__remote__/config` and reads the exported `CONFIG`.
-3. core-ui routes `/<CONFIG.path>/*` to `__remote__/<CONFIG.name>` and
-   `/settings/<CONFIG.path>/*` to `__remote__/<CONFIG.name>Settings`,
-   rendering each expose's PascalCase export (`__Pascal__`, `__Pascal__Settings`).
-   A third expose, `__remote__/notificationWidget`, renders
-   `__name__:<module>.<action>` notifications in the inbox — it receives the
-   `TNotification` object as props and is resolved by the named export
-   `NotificationWidget`.
+3. core-ui routes `/<CONFIG.path>/*` to `__remote__/<CONFIG.name>`, rendering
+   the page component `__Pascal__`. The page owns its `AppLayout`, sidebar and
+   nested settings route `/__name__/settings`. CONFIG supplies a navigation
+   group `defaultPath` and module paths relative to the host root, including the
+   plugin prefix (for example, `__name__/records`, not just `records`). Sidebar
+   links use a leading `/`; CONFIG paths do not. The host does not use
+   the old `settingsNavigation` or navigation-group `content`/`subGroup` slots.
+   Only `./config` and `./__name__` are baseline exposes; add optional widgets
+   when there is actual functionality behind them.
 4. The `hostShared` list in `ui/rspack.config.ts` — `react`, `react-dom`,
    `react-router`, `react-router-dom`, `@apollo/client`, `jotai`,
    `react-i18next`, `erxes-ui` and `ui-modules` — mirrors core-ui's
    `coreLibraries` singletons, so the page runs inside core-ui's router,
    ApolloProvider, i18n and design system with the user's auth cookie. The
    remote never bundles them.
-
-core-api sends a `__name__:system.welcome` notification to every user when the
-plugin is enabled; core-ui renders that one itself. Every other notification
-your API sends with contentType `__name__:<module>.<action>` opens in the
-inbox and renders through `ui/src/widgets/NotificationWidget.tsx`.
 
 core-ui in development also registers remotes it gets from
 `/get-frontend-plugins`, so `pnpm dev:uis` in erxes plus `__pmRun__ dev:ui`
@@ -72,17 +80,41 @@ them under the names erxes code imports, with npm aliases:
 
 Notes:
 
-- Each package has its own semver version. erxes pins the exact versions it
-  is built with (the root `package.json` for the UI packages, each backend
-  `package.json` for `erxes-api-shared`); keep this repo on the same versions
-  as your erxes deployment. The host provides `erxes-ui`/`ui-modules` as
-  Module Federation singletons at runtime, so a mismatch surfaces as broken
-  imports, not as a helpful error.
-- The packages ship compiled code and type declarations, so `tsc` checks the
-  plugin against declarations only.
-- With pnpm, `ui-modules` reports its `erxes-ui` peer as unmet: pnpm can't
-  compare an aliased peer range. The peer is still linked to the `erxes-ui`
-  this repo installs, so the warning is harmless.
+- For the platform stack, use Yarn 4+ if choosing Yarn (tested: 4.18.1).
+  Published `@erxes/api-shared` has a `yarn: "please-use-pnpm"` engine field,
+  which Yarn Classic rejects. Modern Yarn installs the package without
+  disabling engine checks. Activate Yarn 4 using Corepack, or choose pnpm.
+
+- The tested host baseline is **erxes __erxesRelease__**. Exact package pins are
+  `@erxes/ui@3.3.4`, `@erxes/ui-modules@3.3.4`, and `@erxes/api-shared@3.3.4`.
+  This shared-library patch cohort preserves the host contract.
+  React and ReactDOM 18.3.1 constraints are generated automatically, including
+  transitive peers. There is no automatic `latest` upgrade. Inspect published
+  peers and exports, then run fresh external install, codegen, check, build
+  and a host smoke test when changing the cohort.
+- The cohort's `ui-modules` peer range accepts the exact `erxes-ui` alias.
+  Do not dismiss peer conflicts or use `--legacy-peer-deps` to hide them. CI verifies the installed package versions and peer ranges.
+- Platform projects constrain Sentry Node 10.76.2, OpenTelemetry API 1.9.1,
+  instrumentation 0.220.0 and trace SDK 2.12.0 through root npm/pnpm overrides
+  or Yarn resolutions. The published floating graph can select API 1.10,
+  which violates the trace SDK's `<1.10` peer range. These constraints retain
+  the tested graph with real peer checks enabled; they do not assert arbitrary
+  future telemetry compatibility. Update the cohort together and rerun fresh
+  strict pnpm, npm and Yarn 4 platform install/codegen/check/lint/build checks.
+- Published export maps include compiled declarations and, for some UI
+  exports, source fallbacks. External type-check/build tests are required;
+  do not assume monorepo path aliases or private files are present.
+- `CONFIG.platform` declares `__erxesRelease__` for the host compatibility
+  warning. It is advisory: core-ui can still load a remote outside that range.
+  Validate the host release before deployment; this field does not enforce it.
+- `requiredVersion: false` is intentional **host-only consumption**, not a
+  promise of cross-version compatibility. Nx hosts may advertise workspace
+  versions (e.g. `1.1.0`) rather than the public cohort version. A blanket
+  strict npm range would reject such hosts without proving ABI compatibility.
+  Keep all nine `hostShared` keys `singleton: true, import: false`: the remote
+  provides no private fallback. CI checks emitted federation stats for no
+  shared fallback/provider assets. The host must supply those same keys;
+  unknown/different host releases need explicit validation, not a bundled copy.
 
 ## GraphQL types
 
@@ -108,7 +140,59 @@ own CSS — no extra setup needed.
 
 core-ui guards the route with `hasPluginPermission(CONFIG.name)`, which only
 restricts plugins that core-api lists in `pluginsWithPermissions`, i.e. plugins
-whose registered `meta.permissions` declares modules or default groups. That
-list holds the plugin `name` (`__name__`) while the guard checks `CONFIG.name`
-(`__id__`); for a dashed name they differ and the route guard never blocks.
+whose registered `meta.permissions` declares modules or default groups.
+The registered API permission plugin and `CONFIG.name` both use `__name__`,
+including dashes. The normalized container `__remote__` is only a loading key;
+it must never replace that public permission identity.
 Enforce access in the API resolvers, never only in the UI.
+
+On the platform stack, `api/src/permissions.ts` declares
+`__camel__SamplesRead` and `main.ts` registers it as `meta.permissions`.
+The sample list requires a user, a tenant and `await checkPermission(action)`
+before reading `context.models.Samples`. An administrator must grant the
+sample module's read action with `all` scope (or use an owner account). There
+are no automatic default grants. `all` means this tenant only: the model
+factory selects the tenant's database. The example deliberately does not
+advertise own/group scopes without implementing corresponding row filters.
+
+The sample query accepts `limit` (default 20, range 1–100) and `offset`
+(default 0, range 0–10000), applies both in Mongo and sorts by `createdAt` and
+`_id`. The platform UI shows loading, denied/error, empty and paginated states.
+The status query is a diagnostic and does not read sample data. Standalone
+frameworks provide only the diagnostic query; add real authorization before
+adding application data.
+
+## Trusted gateway boundary
+
+Both `startPlugin` and the standalone `api/src/context.ts` consume forwarded
+`user` (base64 JSON) and `hostname`/`nginx-hostname` tenant headers. Base64 is
+not a signature. A well-formed header can assert any identity if a caller can
+reach the API directly; parsing it is not independent authentication.
+
+- Keep API ports on a private network reachable only by the trusted gateway
+  (and controlled health/introspection infrastructure). Do not publish the
+  subgraph directly to the internet. Local development is trusted-local only.
+- At public ingress, strip client-supplied `user`, `hostname` and
+  `nginx-hostname`; configure the platform to forward its authenticated user
+  and validated tenant host. Do not allow clients to override those assertions.
+- A malformed standalone user header becomes anonymous. A well-formed one is
+  trusted only because of this network boundary. Resolvers must still enforce
+  login, permissions and tenant-scoped access.
+
+## Production deployment
+
+Install and retain the generated lockfile before the API Docker build. Supply
+MongoDB (platform stack), Redis and gateway addressing through deployment
+environment variables. Redis must be the same service/database erxes uses.
+The API address (`LOAD_BALANCER_ADDRESS` or `plugin-__name__-api:<port>`) must be
+reachable by the gateway; it is not the UI address. Production registration
+must keep the router-update BullMQ job so the gateway recomposes.
+
+Build the UI and upload **all** of `ui/dist`, not just `remoteEntry.js`, to your
+static host. Set API `UI_ENTRY_URL` to the browser-reachable HTTPS URL ending in
+`remoteEntry.js`. Enable CORS for the erxes UI origin. Upload chunks first and
+the entry last; serve `remoteEntry.js` and federation manifests with no-store
+or revalidation. Cache only content-hashed assets immutably. Preserve old
+chunks during rollout so existing sessions can finish loading. The API Docker
+image does not serve the UI. The plugins.erxes.io fallback is not a publishing
+service: this generator does not upload your plugin there.

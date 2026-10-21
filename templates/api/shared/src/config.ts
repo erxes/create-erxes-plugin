@@ -4,6 +4,7 @@ import { z } from "zod";
 // erxes.json sits at the repository root, two levels above both src/ and dist/.
 const manifestSchema = z.object({
   name: z.string(),
+  title: z.string(),
   version: z.string(),
   api: z.object({
     port: z.number().int(),

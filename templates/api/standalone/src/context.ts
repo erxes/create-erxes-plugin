@@ -2,6 +2,10 @@ import { z } from "zod";
 
 // The gateway forwards the signed-in user as base64 JSON in the `user` header
 // and the request host in `hostname` (or `nginx-hostname` behind nginx).
+// These are unsigned identity assertions, NOT independent authentication.
+// Only expose this API on a private network reachable by the trusted erxes
+// gateway. The public ingress must strip/overwrite client-supplied identity
+// and tenant headers. Never authorize a public direct request using them.
 const userSchema = z
   .object({
     _id: z.string(),

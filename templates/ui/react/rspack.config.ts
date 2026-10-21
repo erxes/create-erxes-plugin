@@ -49,16 +49,17 @@ export default defineConfig({
       name: remote,
       filename: "remoteEntry.js",
       // core-ui loads `<remote>/config` for CONFIG, `<remote>/<name>` for the
-      // page at `/<path>/*`, `<remote>/<name>Settings` at `/settings/<path>/*`
-      // and `<remote>/notificationWidget` for `<name>:<module>.<action>`
-      // notifications in the inbox.
+      // page at `/<path>/*`. Nested settings belong to the page, not the host.
       exposes: {
         "./config": "./src/config.tsx",
         [`./${name}`]: "./src/Main.tsx",
-        [`./${name}Settings`]: "./src/Settings.tsx",
-        "./notificationWidget": "./src/widgets/NotificationWidget.tsx",
       },
       shared: Object.fromEntries(
+        // Host-only consumption, no local fallback. Nx hosts can advertise
+        // workspace versions rather than npm alias versions, so do not apply
+        // npm semver negotiation here. Deploy only with the erxes release in
+        // docs/erxes-integration.md; CI checks installed peers and no fallback
+        // artifacts. requiredVersion:false does NOT mean arbitrary hosts work.
         hostShared.map((lib) => [lib, { singleton: true, import: false, requiredVersion: false }]),
       ),
       dts: false,
