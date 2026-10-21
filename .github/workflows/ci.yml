@@ -29,3 +29,39 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm check && pnpm lint && pnpm test && pnpm compile linux-x64
+
+  publish:
+    needs: [deliverables, check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Publish this version when npm does not have it
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH }}
+        run: |
+          set -euo pipefail
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "${name}@${version} is already on npm."
+            echo "Bump package.json in the merged pull request to publish a new version."
+            exit 0
+          fi
+          npm publish --access public
+          echo "published ${name}@${version}"

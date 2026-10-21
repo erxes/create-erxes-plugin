@@ -179,6 +179,9 @@ export const createPackageManagerFiles = (o: ProjectOptions): Record<string, str
       ".yarnrc.yml": `${JSON.stringify(
         {
           nodeLinker: "node-modules",
+          // Yarn otherwise turns CI=true into an immutable install and
+          // refuses to create the first yarn.lock.
+          enableImmutableInstalls: false,
           packageExtensions: {
             ...YARN_UI_EXTENSIONS,
             ...(o.backend === "platform" ? YARN_PLATFORM_EXTENSIONS : {}),

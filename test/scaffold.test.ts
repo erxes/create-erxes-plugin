@@ -138,6 +138,10 @@ for (const pm of PACKAGE_MANAGERS) {
           "packages:\n  - api\n  - ui\n",
         );
       }
+      if (pm === "yarn") {
+        const yarnrc = await readFile(join(dir, ".yarnrc.yml"), "utf8");
+        assert.match(yarnrc, /"enableImmutableInstalls": false/);
+      }
     });
 
     it("automatically keeps transitive React peers on the host's React 18 cohort", async () => {
