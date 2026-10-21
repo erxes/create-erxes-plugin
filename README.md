@@ -175,7 +175,12 @@ federation exposes and the absence of bundled host-singleton fallbacks.
 Platform cases also execute generated authorization/pagination regressions
 without starting databases. This is not a full live erxes deployment test.
 
-Push a `vX.Y.Z` tag: `.github/workflows/release.yml` compiles every target,
-packs `dist/release/` archives plus `SHA256SUMS`, and publishes a GitHub
-release. A `workflow_dispatch` run exercises the same pipeline without
-publishing.
+Merging to `main` publishes `@erxes/create-plugin` from CI. Bump
+`package.json` in that pull request. If that exact version is already on
+npm, the workflow leaves it there. No local `npm publish` and no one-time
+password are required.
+
+Push a `vX.Y.Z` tag when you also want the standalone binary GitHub release.
+`.github/workflows/release.yml` compiles every target, packs `dist/release/`
+archives plus `SHA256SUMS`, and publishes that GitHub release. A
+`workflow_dispatch` run exercises the same pipeline without publishing.
