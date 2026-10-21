@@ -20,15 +20,23 @@ const DOTFILES: Record<string, string> = {
   "_oxlintrc.json": ".oxlintrc.json",
 };
 
+// Host compatibility and npm package releases are separate: the 3.3.4
+// shared-library patch cohort preserves the erxes 3.3.2 host contract.
+export const ERXES_RELEASE = "3.3.2";
+export const ERXES_PACKAGE_RELEASE = "3.3.4";
 /** The erxes shared libraries on npm, installed under the names erxes code imports. */
 export const ERXES_PACKAGES = {
-  "erxes-ui": "npm:@erxes/ui@^1.0.0",
-  "ui-modules": "npm:@erxes/ui-modules@^1.0.0",
-  "erxes-api-shared": "npm:@erxes/api-shared@^1.0.0",
+  "erxes-ui": `npm:@erxes/ui@${ERXES_PACKAGE_RELEASE}`,
+  "ui-modules": `npm:@erxes/ui-modules@${ERXES_PACKAGE_RELEASE}`,
+  "erxes-api-shared": `npm:@erxes/api-shared@${ERXES_PACKAGE_RELEASE}`,
 } as const;
 
-const applyTokens = (text: string, tokens: [string, string][]) =>
-  tokens.reduce((result, [token, value]) => result.replaceAll(token, value), text);
+const applyTokens = (text: string, tokens: [string, string][]) => {
+  const values = new Map(tokens);
+  // Match only the original template. User strings can contain both dollar
+  // replacement sequences and token-looking text; neither is interpreted.
+  return text.replace(/__[A-Za-z][A-Za-z0-9]*__/g, (token) => values.get(token) ?? token);
+};
 
 const tokensFor = ({
   names,
@@ -54,9 +62,15 @@ const tokensFor = ({
     ["__description__", description],
     ["__backendLabel__", BACKENDS[backend].label],
     ["__backendHint__", BACKENDS[backend].hint],
+    [
+      "__samplePanelImport__",
+      backend === "platform" ? 'import { Samples } from "../Samples";' : "",
+    ],
+    ["__samplePanel__", backend === "platform" ? "<Samples />" : ""],
     ["__erxesUiDep__", ERXES_PACKAGES["erxes-ui"]],
     ["__erxesUiModulesDep__", ERXES_PACKAGES["ui-modules"]],
     ["__erxesApiSharedDep__", ERXES_PACKAGES["erxes-api-shared"]],
+    ["__erxesRelease__", ERXES_RELEASE],
   ];
 
   // The prose blocks embed the same placeholders (e.g. `__name__` inside
@@ -96,7 +110,7 @@ const API_CONTRACTS: Record<Integration, string> = {
   platform: `- \`api/src/main.ts\` boots through erxes-api-shared \`startPlugin\`, which owns
   gateway registration (including \`UI_ENTRY_URL\`), \`/health\`, \`/graphql\`,
   gateway-header parsing and — in production — the router-update BullMQ job.
-- Tenant data goes through \`generateModels(subdomain)\` onto \`context.models\`;
+- Tenant data goes through \`generateModels(subdomain, context)\` onto \`context.models\`;
   never connect to Mongo directly. \`checkPermission(action)\` is on the context.`,
 };
 
@@ -134,7 +148,7 @@ in production the router-update lock plus the BullMQ
 \`GET /health\`, and parses the gateway's forwarded headers — \`user\` (base64
 JSON of the signed-in user) and \`hostname\`/\`nginx-hostname\` — into the
 context itself. \`apolloServerContext\` then adds \`models\` from
-\`generateModels(subdomain)\`: Mongoose models bound to that tenant's
+\`generateModels(subdomain, context)\`: Mongoose models bound to that tenant's
 database, which is the only supported way to touch plugin data.
 
 The context also carries \`checkPermission(action)\` — use it in resolvers;
@@ -198,6 +212,19 @@ const configureApiRuntime = async (apiDir: string, options: ProjectOptions) => {
 };
 
 export const scaffold = async (targetDir: string, options: ProjectOptions) => {
+  // api-shared publishes a non-semver "please-use-pnpm" Yarn engine.
+  // Yarn Classic rejects it; use modern Yarn without ignore-engines or peer
+  // bypass flags. Require the tested modern family.
+  if (
+    options.backend === "platform" &&
+    options.packageManager === "yarn" &&
+    Number(options.packageManagerVersion?.split(".")[0] ?? 0) < 4
+  ) {
+    throw new Error(
+      "The platform stack requires Yarn 4+; activate Yarn 4 with Corepack or choose --pm pnpm. Published @erxes/api-shared rejects Yarn Classic.",
+    );
+  }
+
   const tokens = tokensFor(options);
   const apiDir = join(targetDir, "api");
 
@@ -209,6 +236,9 @@ export const scaffold = async (targetDir: string, options: ProjectOptions) => {
     await copyLayer(layer, apiDir, tokens);
   }
   await copyLayer(FRONTENDS[options.frontend].template, join(targetDir, "ui"), tokens);
+  if (options.backend === "platform") {
+    await copyLayer("ui/platform", join(targetDir, "ui"), tokens);
+  }
   await configureApiRuntime(apiDir, options);
 
   await writeJson(join(targetDir, "erxes.json"), createManifest(options));

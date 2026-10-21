@@ -2,8 +2,10 @@
 
 __description__
 
-An erxes plugin that lives outside the erxes monorepo and joins an erxes stack
-without erxes source changes.
+An erxes plugin that lives outside the erxes monorepo and joins an erxes stack.
+The shared-library baseline is erxes __erxesRelease__. Dashed plugin names
+use the same public permission identity in the API and UI; the host must support
+normalized remote discovery and dashed page-module loading (see integration docs).
 
 | Part   | Path         | Stack                                                    | Dev port    |
 | ------ | ------------ | -------------------------------------------------------- | ----------- |
@@ -36,14 +38,12 @@ core-api so they pick it up:
 ENABLED_PLUGINS=...,__name__
 ```
 
-Then open `http://localhost:3001/__name__`. Requests reach the API through the
-gateway (`/graphql`), which forwards the signed-in user and tenant. To call the
-API directly:
-
-```sh
-curl localhost:__apiPort__/graphql -H 'content-type: application/json' \
-  -d '{"query":"query __camel__Status { __camel__Status { plugin subdomain userEmail } }"}'
-```
+Then open `http://localhost:3001/__name__` (settings: `/__name__/settings`).
+Both processes must use the same Redis as erxes; `UI_ENTRY_URL` must be
+reachable by the browser, not merely by the API container. Requests reach the
+API through the gateway (`/graphql`), which forwards the signed-in user and
+tenant. Those headers are not independently authenticated: keep the API on
+a private gateway-only network and strip user/tenant headers at public ingress.
 
 ## Scripts
 
@@ -60,11 +60,15 @@ curl localhost:__apiPort__/graphql -H 'content-type: application/json' \
 ## Deploy
 
 - **API**: `docker build --build-arg UI_ENTRY_URL=<remoteEntry.js URL> -t <image> .`
+  Run `__pm__ install` first and commit its lockfile before building the image.
   The image serves the API on port 80 and registers itself on start
   (`plugin-__name__-api:80` unless `LOAD_BALANCER_ADDRESS` is set).
 - **UI**: upload `ui/dist` to a static host or CDN. Upload hashed assets
   first and `remoteEntry.js` last with `Cache-Control: no-store`. Without
-  `UI_ENTRY_URL`, erxes loads `https://plugins.erxes.io/<release>/__name___ui/remoteEntry.js`.
+  `UI_ENTRY_URL`, erxes falls back to `https://plugins.erxes.io/<release>/__name___ui/remoteEntry.js`;
+  this generator does not upload there. Set your own browser-reachable URL,
+  serve all emitted chunks with CORS for the erxes origin, and use immutable
+  caching only for content-hashed assets (not stable-named expose chunks).
 
 See [docs/erxes-integration.md](docs/erxes-integration.md) for how the plugin
 plugs into erxes and [AGENTS.md](AGENTS.md) for the rules to keep it working.

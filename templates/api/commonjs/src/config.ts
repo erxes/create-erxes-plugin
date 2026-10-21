@@ -8,6 +8,7 @@ import { z } from "zod";
 // both src/ and dist/.
 const manifestSchema = z.object({
   name: z.string(),
+  title: z.string(),
   version: z.string(),
   api: z.object({
     port: z.number().int(),

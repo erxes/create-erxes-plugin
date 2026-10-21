@@ -9,7 +9,7 @@ const RESERVED_NAMES = new Set(["core", "gateway", "api", "graphql", "health"]);
 export type PluginNames = {
   /** Plugin name: Redis keys, gateway service, route path, CDN folder. */
   name: string;
-  /** Underscored name: Module Federation container prefix and `CONFIG.name`. */
+  /** Underscored identifier used only for the Module Federation container. */
   id: string;
   /** Module Federation remote name core-ui loads (`<id>_ui`). */
   remote: string;

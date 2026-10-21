@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { type ErxesManifest, type ProjectOptions, runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
-import { ERXES_PACKAGES, scaffold } from "../src/scaffold.ts";
+import { scaffold } from "../src/scaffold.ts";
 import {
   BACKENDS,
   type Backend,
@@ -22,7 +22,7 @@ const optionsFor = (packageManager: PackageManager): ProjectOptions => ({
   backend: "express",
   frontend: "react",
   packageManager,
-  packageManagerVersion: packageManager === "yarn" ? "1.22.22" : "10.28.1",
+  packageManagerVersion: packageManager === "yarn" ? "4.18.1" : "10.28.1",
   apiPort: 3400,
   uiPort: 3100,
 });
@@ -72,7 +72,7 @@ for (const pm of PACKAGE_MANAGERS) {
       assert.deepEqual(manifest.ui, {
         framework: "react",
         port: 3100,
-        name: "erxes_agent_v2",
+        name: "erxes-agent-v2",
         remote: "erxes_agent_v2_ui",
         path: "erxes-agent-v2",
       });
@@ -117,9 +117,7 @@ for (const pm of PACKAGE_MANAGERS) {
       }[pm];
       assert.equal(pkg.scripts.codegen, expectedCodegen);
       assert.ok(
-        pkg.scripts.check?.startsWith(
-          pm === "yarn" ? "yarn codegen && " : `${pm} run codegen && `,
-        ),
+        pkg.scripts.check?.startsWith(pm === "yarn" ? "yarn codegen && " : `${pm} run codegen && `),
         pkg.scripts.check,
       );
       assert.ok(existsSync(join(dir, "ui/codegen.ts")), "ui/codegen.ts");
@@ -142,11 +140,22 @@ for (const pm of PACKAGE_MANAGERS) {
       }
     });
 
+    it("automatically keeps transitive React peers on the host's React 18 cohort", async () => {
+      const root = await readJson<{
+        overrides?: Record<string, string>;
+        resolutions?: Record<string, string>;
+        pnpm?: { overrides: Record<string, string> };
+      }>(join(dir, "package.json"));
+      const constraints =
+        pm === "pnpm" ? root.pnpm?.overrides : pm === "yarn" ? root.resolutions : root.overrides;
+      assert.equal(constraints?.react, "18.3.1");
+      assert.equal(constraints?.["react-dom"], "18.3.1");
+    });
+
     it("installs the erxes shared libraries from npm under their import names", async () => {
       const ui = await readJson<PackageJson>(join(dir, "ui/package.json"));
-      for (const name of ["erxes-ui", "ui-modules"] as const) {
-        assert.equal(ui.devDependencies[name], ERXES_PACKAGES[name]);
-      }
+      assert.equal(ui.devDependencies["erxes-ui"], "npm:@erxes/ui@3.3.4");
+      assert.equal(ui.devDependencies["ui-modules"], "npm:@erxes/ui-modules@3.3.4");
     });
   });
 }
@@ -194,24 +203,23 @@ describe("backend stacks", () => {
       assert.deepEqual(api.scripts, runtimesFor({ backend })[runtimeFor(pm)]?.scripts);
       assert.ok(api.scripts["schema:print"], "schema:print");
       assert.ok(existsSync(join(dir, "api/src/print-schema.ts")));
-      assert.equal(
-        existsSync(join(dir, "api/src/resolvers.ts")),
-        backend === "nestjs",
-      );
+      assert.equal(existsSync(join(dir, "api/src/resolvers.ts")), backend === "nestjs");
       // Scripts run in api/ and must read the single .env at the repo root.
       for (const script of [api.scripts.dev, api.scripts.start]) {
         assert.match(script ?? "", /--env-file(-if-exists)?=\.\.\/\.env\b/, script);
       }
 
       for (const file of [
-        "ui/src/Settings.tsx",
+        "ui/src/Main.tsx",
         "ui/src/pages/IndexPage.tsx",
         "ui/src/modules/Navigation.tsx",
-        "ui/src/widgets/NotificationWidget.tsx",
       ]) {
         assert.ok(existsSync(join(dir, file)), file);
       }
       assert.equal(existsSync(join(dir, "ui/src/PluginIcon.tsx")), false);
+      assert.equal(existsSync(join(dir, "ui/src/Settings.tsx")), false);
+      assert.equal(existsSync(join(dir, "ui/src/widgets/NotificationWidget.tsx")), false);
+      assert.equal(existsSync(join(dir, "ui/src/Samples.tsx")), backend === "platform");
 
       const indexPage = await readFile(join(dir, "ui/src/pages/IndexPage.tsx"), "utf8");
       const apiEntryHint =
@@ -221,6 +229,76 @@ describe("backend stacks", () => {
             ? "api/src/status/status.resolver.ts"
             : "api/src/graphql/schema.ts";
       assert.ok(indexPage.includes(apiEntryHint), apiEntryHint);
+    });
+  }
+});
+
+describe("host contract", () => {
+  it("rejects unsupported platform Yarn versions before writing a project", async () => {
+    for (const version of [undefined, "1.22.22", "3.8.7"]) {
+      const dir = join(root, `unsupported-yarn-${version}`);
+      await assert.rejects(
+        scaffold(dir, {
+          ...optionsFor("yarn"),
+          backend: "platform",
+          packageManagerVersion: version,
+        }),
+        /requires Yarn 4\+/,
+      );
+      assert.equal(existsSync(dir), false);
+    }
+  });
+
+  for (const name of ["inventory", "inventory-tools"]) {
+    it(`${name}: consistent identity, required exposes and plugin-owned routes`, async () => {
+      const dir = join(root, name);
+      const names = derivePluginNames(name);
+      await scaffold(dir, { ...optionsFor("pnpm"), names, backend: "platform" });
+      const manifest = await readJson<ErxesManifest>(join(dir, "erxes.json"));
+      assert.equal(manifest.name, name);
+      assert.equal(manifest.ui.name, manifest.name);
+      assert.equal(manifest.ui.remote, `${names.id}_ui`);
+      assert.equal(manifest.ui.path, name);
+      const config = await readFile(join(dir, "ui/src/config.tsx"), "utf8");
+      assert.doesNotMatch(config, /settingsNavigation|subGroup|content:/);
+      assert.match(config, /defaultPath: path/);
+      assert.match(config, /platform: "3\.3\.2"/);
+      const main = await readFile(join(dir, "ui/src/Main.tsx"), "utf8");
+      assert.ok(main.includes(`export const ${names.pascal} =`));
+      assert.match(main, /<AppLayout/);
+      assert.match(main, /path="settings"/);
+      const nav = await readFile(join(dir, "ui/src/modules/Navigation.tsx"), "utf8");
+      assert.ok(nav.includes("path={`/${manifest.ui.path}/settings`}"));
+      const federation = await readFile(join(dir, "ui/rspack.config.ts"), "utf8");
+      assert.match(federation, /"\.\/config": "\.\/src\/config.tsx"/);
+      assert.ok(federation.includes('[`./${name}`]: "./src/Main.tsx"'));
+      assert.doesNotMatch(federation, /notificationWidget|name}Settings/);
+      const shared = federation.slice(
+        federation.indexOf("const hostShared"),
+        federation.indexOf("export default"),
+      );
+      assert.deepEqual(
+        [...shared.matchAll(/"([^"]+)"/g)].map((match) => match[1]).sort(),
+        [
+          "react",
+          "react-dom",
+          "react-router",
+          "react-router-dom",
+          "@apollo/client",
+          "jotai",
+          "react-i18next",
+          "erxes-ui",
+          "ui-modules",
+        ].sort(),
+      );
+      assert.match(federation, /singleton: true, import: false, requiredVersion: false/);
+      const api = await readJson<{ dependencies: Record<string, string> }>(
+        join(dir, "api/package.json"),
+      );
+      assert.equal(api.dependencies["erxes-api-shared"], "npm:@erxes/api-shared@3.3.4");
+      for (const file of ["package.json", "api/package.json", "ui/package.json"]) {
+        assert.doesNotMatch(await readFile(join(dir, file), "utf8"), /workspace:|file:|link:/);
+      }
     });
   }
 });

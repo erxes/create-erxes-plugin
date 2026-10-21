@@ -9,7 +9,10 @@ permissions:
   contents: write
 
 jobs:
+  deliverables:
+    uses: ./.github/workflows/deliverables.yml
   release:
+    needs: deliverables
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

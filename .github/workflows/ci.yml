@@ -6,6 +6,8 @@ on:
   pull_request:
 
 jobs:
+  deliverables:
+    uses: ./.github/workflows/deliverables.yml
   check:
     runs-on: ubuntu-latest
     steps:

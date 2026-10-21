@@ -22,7 +22,7 @@ export const SettingsPage = () => (
           <Breadcrumb.List className="__twPrefix__:gap-1">
             <Breadcrumb.Item>
               <Button variant="ghost" asChild>
-                <Link to={`/settings/${path}`}>
+                <Link to={`/${path}/settings`}>
                   <IconSettings />
                   {manifest.title} settings
                 </Link>

@@ -1,0 +1,34 @@
+name: Generated deliverables
+
+on:
+  workflow_call:
+
+jobs:
+  external-project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        # Every backend builds React too. Additional package managers are
+        # exercised on the default platform stack rather than a 6x4 matrix.
+        case: [platform-pnpm, platform-npm, platform-yarn, express-pnpm, fastify-pnpm, hono-pnpm, nestjs-pnpm, elysia-bun]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.x"
+      - run: corepack enable yarn && corepack prepare yarn@4.18.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Test packed CLI in a fresh external directory
+        run: pnpm test:e2e
+        env:
+          E2E_CASE: ${{ matrix.case }}
