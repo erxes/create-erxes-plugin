@@ -162,6 +162,27 @@ describe("generated projects install, type-check and build", { skip: !enabled },
         root,
       );
 
+      if (pm === "yarn") {
+        // Keep the first-party packages quarantined even after they age out
+        // of Yarn's default 24-hour window. Their exact approvals must allow
+        // a fresh install without disabling the gate for other dependencies.
+        const yarnrcPath = join(dir, ".yarnrc.yml");
+        const yarnrc = JSON.parse(await readFile(yarnrcPath, "utf8"));
+        yarnrc.npmScopes = { erxes: { npmMinimalAgeGate: "36500d" } };
+        await writeFile(
+          yarnrcPath,
+          JSON.stringify({ ...yarnrc, npmPreapprovedPackages: [] }, null, 2),
+        );
+        const quarantined = await x("yarn", ["install", "--mode=update-lockfile"], {
+          nodeOptions: { cwd: dir },
+          timeout: 60_000,
+          throwOnError: false,
+        });
+        assert.notEqual(quarantined.exitCode, 0, "unapproved first-party releases are gated");
+        assert.match(quarantined.stdout, /YN0016:.*quarantined/);
+        await writeFile(yarnrcPath, JSON.stringify(yarnrc, null, 2));
+      }
+
       await run(pm, pm === "pnpm" ? ["install", "--strict-peer-dependencies"] : ["install"], dir);
       await checkPeers(dir);
       await run(pm, ["run", "codegen"], dir);

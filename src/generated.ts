@@ -1,4 +1,5 @@
 import type { PluginNames } from "./naming.ts";
+import { ERXES_PACKAGES } from "./releases.ts";
 import {
   BACKENDS,
   type Backend,
@@ -182,6 +183,14 @@ export const createPackageManagerFiles = (o: ProjectOptions): Record<string, str
           // Yarn otherwise turns CI=true into an immutable install and
           // refuses to create the first yarn.lock.
           enableImmutableInstalls: false,
+          // These exact first-party releases are selected by the scaffold.
+          // Allow installing immediately after publication while preserving
+          // Yarn's age gate for all other packages and versions.
+          npmPreapprovedPackages: [
+            ERXES_PACKAGES["erxes-ui"].slice(4),
+            ERXES_PACKAGES["ui-modules"].slice(4),
+            ...(o.backend === "platform" ? [ERXES_PACKAGES["erxes-api-shared"].slice(4)] : []),
+          ],
           packageExtensions: {
             ...YARN_UI_EXTENSIONS,
             ...(o.backend === "platform" ? YARN_PLATFORM_EXTENSIONS : {}),
