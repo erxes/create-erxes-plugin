@@ -114,6 +114,13 @@ export const HELPERS: Record<string, Equivalent> = {
     'scope notifications:write; kind in manifest.notificationKinds',
   ),
   sendNotifications: sdk('notifications.create', 'scope notifications:write'),
+  sendAutomationTrigger: sdk(
+    'core_publish_event() in the same transaction',
+    'declare the type in manifest.events; automations start from events',
+  ),
+  sendAutomationDeferredCompletion: gap(
+    'an automation action answers in its HTTP response; core has no deferred completion',
+  ),
 };
 
 /** Meta registrations in `startPlugin({ meta })` and `meta/`. */
