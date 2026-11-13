@@ -12,8 +12,8 @@ export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Runs `fn` in a transaction scoped to one organisation. Row-level security
- * shows nothing outside it, so every query that touches a table goes through
- * here. Services still filter by `orgId`; RLS is the safety net.
+ * shows and accepts only that organisation's rows, so queries carry no org
+ * filter, and every query that touches a table goes through here.
  */
 export const withOrg = <T>(orgId: string, fn: (tx: Tx) => Promise<T>) =>
   db.transaction(async (tx) => {

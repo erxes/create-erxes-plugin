@@ -31,7 +31,7 @@ export default defineConfig({
     ],
   },
   lint: {
-    plugins: ['typescript', 'unicorn', 'oxc', 'import', 'vitest'],
+    plugins: ['typescript', 'unicorn', 'oxc', 'import', 'vitest', 'node'],
     jsPlugins: [{ name: 'vite-plus', specifier: 'vite-plus/oxlint-plugin' }],
     categories: { correctness: 'error' },
     options: { typeAware: true, typeCheck: true },
@@ -59,6 +59,8 @@ export default defineConfig({
         { considerDefaultExhaustiveForUnions: true },
       ],
       'oxc/no-accumulating-spread': 'error',
+      // Settings are read once, validated, in api/src/config.ts.
+      'node/no-process-env': 'error',
     },
     overrides: [
       {
@@ -90,10 +92,21 @@ export default defineConfig({
         },
       },
       {
-        // Command-line tools that print to the terminal.
+        // Where settings come from the environment: the API's config, tests and build configs.
+        files: [
+          'api/src/config.ts',
+          'api/src/test/**',
+          'vite.config.ts',
+          'api/drizzle.config.ts',
+          'ui/rsbuild.config.ts',
+        ],
+        rules: { 'node/no-process-env': 'off' },
+      },
+      {
+        // Command-line tools that print to the terminal and read their settings.
         files: ['migration/**', 'scripts/**'],
         env: { node: true },
-        rules: { 'no-console': 'off' },
+        rules: { 'no-console': 'off', 'node/no-process-env': 'off' },
       },
       {
         // Tools load these through their default export.

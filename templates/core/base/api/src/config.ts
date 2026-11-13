@@ -22,6 +22,8 @@ const Env = z.object({
   CORE_UI_URL: z.url().optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   VERSION: z.string().default('0.1.0'),
+  /** Traces go to this OTLP collector; the SDK reads the other OTEL_* variables itself. */
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
 });
 
 const env = Env.parse(process.env);
@@ -37,4 +39,5 @@ export const config = {
   coreUiOrigin: new URL(env.CORE_UI_URL ?? env.CORE_URL).origin,
   logLevel: env.LOG_LEVEL,
   version: env.VERSION,
+  tracing: Boolean(env.OTEL_EXPORTER_OTLP_ENDPOINT),
 };

@@ -21,7 +21,7 @@ const list = reads(PERMISSIONS.view)
       limit: z.number().int().min(1).max(100).default(50),
     }),
   )
-  .handler(async ({ input, context: { tx, member } }) => {
+  .handler(async ({ input, context: { tx } }) => {
     const after = input.cursor
       ? sql`(${items.createdAt}, ${items.id}) < (select created_at, id from ${items} where id = ${input.cursor})`
       : undefined;
@@ -30,11 +30,7 @@ const list = reads(PERMISSIONS.view)
       .select()
       .from(items)
       .where(
-        and(
-          eq(items.orgId, member.orgId),
-          input.search ? ilike(items.name, `%${escapeLike(input.search)}%`) : undefined,
-          after,
-        ),
+        and(input.search ? ilike(items.name, `%${escapeLike(input.search)}%`) : undefined, after),
       )
       .orderBy(desc(items.createdAt), desc(items.id))
       .limit(input.limit + 1);
@@ -62,12 +58,8 @@ const create = writes(PERMISSIONS.manage)
 
 const update = writes(PERMISSIONS.manage)
   .input(Fields.partial().extend({ id: z.string() }))
-  .handler(async ({ input: { id, ...fields }, context: { tx, member } }) => {
-    const [item] = await tx
-      .update(items)
-      .set(fields)
-      .where(and(eq(items.id, id), eq(items.orgId, member.orgId)))
-      .returning();
+  .handler(async ({ input: { id, ...fields }, context: { tx } }) => {
+    const [item] = await tx.update(items).set(fields).where(eq(items.id, id)).returning();
 
     if (!item) throw new ORPCError('NOT_FOUND', { message: 'No such item' });
 
