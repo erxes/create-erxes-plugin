@@ -128,6 +128,7 @@ export const REGISTRATIONS: Record<string, Equivalent> = {
     'manifest.actions',
     'POST <api>/automations/actions/<type>, verifyCoreCall()',
   ),
+  'default role': gap('core roles are its own; a plugin cannot ship a role with grants'),
   segment: gap('core has no segments for plugins'),
   'import-export': gap("core's import and export cover contacts only"),
 };

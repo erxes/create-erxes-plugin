@@ -67,9 +67,14 @@ const workerApis = new Set([
   'agenda.define',
 ]);
 
-/** Meta registrations: which array, in which files, names one registered thing. */
+/**
+ * Meta registrations: which array, in which files, names one registered thing.
+ * Permission actions are objects; the string lists under `defaultGroups` grant
+ * them to a default role and are not new actions.
+ */
 const REGISTRATIONS = [
-  { kind: 'permission', file: /\/meta\/permissions/, key: 'actions', id: ['name'] },
+  { kind: 'permission', file: /\/meta\/permissions/, key: 'actions', id: ['name'], objectsOnly: true },
+  { kind: 'default role', file: /\/meta\/permissions/, key: 'defaultGroups', id: ['id', 'name'] },
   { kind: 'notification', file: /\/meta\/notifications/, key: 'events', id: ['name'] },
   { kind: 'automation trigger', file: /automation/i, key: 'triggers', id: ['type', 'label'] },
   { kind: 'automation action', file: /automation/i, key: 'actions', id: ['type', 'label'] },
@@ -597,6 +602,8 @@ const scanFile = (file: string, source: string, paths: Set<string>) => {
         continue;
 
       for (const entry of pair.field('value')?.namedChildren() ?? []) {
+        if ('objectsOnly' in rule && entry.kind() !== 'object') continue;
+
         const value =
           entry.kind() === 'object'
             ? rule.id.map((key) => field(entry, key)).find((candidate) => candidate !== undefined)
@@ -604,14 +611,24 @@ const scanFile = (file: string, source: string, paths: Set<string>) => {
 
         if (value === undefined) continue;
 
+        // The group is the owner's `name` (a permission module), else the key
+        // the owner sits under (`import: { types }`, `export: { types }`).
         const owner = pair.parent();
+        const name = owner && field(owner, 'name');
+        const above = owner?.parent();
+        const group =
+          typeof name === 'string'
+            ? name
+            : above?.kind() === 'pair'
+              ? above.field('key')?.text()
+              : undefined;
 
         registrations.push({
           kind: rule.kind,
           file,
           line: lineOf(entry),
           id: value,
-          ...(owner && typeof field(owner, 'name') === 'string' && { group: field(owner, 'name') }),
+          ...(group && { group }),
         });
       }
     }
