@@ -1,0 +1,28 @@
+{
+  "name": "@__id__/plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @__id__/api build && pnpm --filter @__id__/ui build",
+    "check": "OXLINT_TSGOLINT_PATH=node_modules/.bin/tsrs-lint vp check",
+    "fix": "OXLINT_TSGOLINT_PATH=node_modules/.bin/tsrs-lint vp check --fix",
+    "fmt": "vp fmt",
+    "test": "vp test run",
+    "db:generate": "pnpm --filter @__id__/api db:generate",
+    "db:check": "pnpm --filter @__id__/api db:check",
+    "dev:api": "pnpm --filter @__id__/api dev",
+    "dev:ui": "pnpm --filter @__id__/ui dev",
+    "image:context": "pnpm build && rm -rf .runtime && pnpm --filter @__id__/api deploy --prod .runtime"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "tsrs": "0.25.0-ts7.1.0-beta",
+    "typescript": "7.0.2",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@__pnpmVersion__"
+}

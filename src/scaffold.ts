@@ -19,6 +19,7 @@ const DOTFILES: Record<string, string> = {
   _dockerignore: ".dockerignore",
   "_env.example": ".env.example",
   "_oxlintrc.json": ".oxlintrc.json",
+  "_node-version": ".node-version",
 };
 
 export { ERXES_RELEASE, ERXES_PACKAGE_RELEASE, ERXES_PACKAGES } from "./releases.ts";
@@ -149,7 +150,7 @@ carries the plugin prefix because all plugins share one supergraph.`,
 };
 
 /** Copies a template layer into `targetDir`, renaming dotfiles and filling tokens. */
-const copyLayer = async (layer: string, targetDir: string, tokens: [string, string][]) => {
+export const copyLayer = async (layer: string, targetDir: string, tokens: [string, string][]) => {
   for (const [key, content] of Object.entries(TEMPLATES)) {
     if (!key.startsWith(`${layer}/`)) continue;
 
@@ -162,7 +163,7 @@ const copyLayer = async (layer: string, targetDir: string, tokens: [string, stri
   }
 };
 
-type PackageJson = {
+export type PackageJson = {
   name: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
@@ -170,12 +171,12 @@ type PackageJson = {
 };
 type TsConfig = { compilerOptions?: { types?: string[] } };
 
-const readJson = async <T>(path: string) => JSON.parse(await readFile(path, "utf8")) as T;
+export const readJson = async <T>(path: string) => JSON.parse(await readFile(path, "utf8")) as T;
 
-const writeJson = (path: string, value: unknown) =>
+export const writeJson = (path: string, value: unknown) =>
   writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
 
-const sortKeys = (record: Record<string, string>) =>
+export const sortKeys = (record: Record<string, string>) =>
   Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b)));
 
 /** Applies the runtime-specific scripts, dev dependencies and types to `api/`. */
