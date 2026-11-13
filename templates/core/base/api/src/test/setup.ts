@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import { afterAll } from 'vite-plus/test';
 
@@ -15,22 +16,8 @@ if (!adminUrl) {
 const ROLE = '__id___test';
 const database = `__id___test_${randomBytes(4).toString('hex')}`;
 
-// Core's tenant functions (erxes packages/db/drizzle), which plugin migrations call.
-const CORE_FUNCTIONS = `
-CREATE OR REPLACE FUNCTION core_tenant_visible(p_org_id text) RETURNS boolean
-LANGUAGE sql STABLE AS $$
-  SELECT p_org_id = current_setting('app.org_id', true)
-      OR coalesce(current_setting('app.system', true), '') = 'on'
-$$;
-CREATE OR REPLACE FUNCTION core_enable_tenant_rls(p_table regclass, p_column text DEFAULT 'org_id') RETURNS void
-LANGUAGE plpgsql AS $$
-BEGIN
-  EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', p_table);
-  EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', p_table);
-  EXECUTE format('DROP POLICY IF EXISTS tenant ON %s', p_table);
-  EXECUTE format('CREATE POLICY tenant ON %s USING (core_tenant_visible(%I)) WITH CHECK (core_tenant_visible(%I))', p_table, p_column, p_column);
-END $$;
-`;
+// Core's tenant functions, which plugin migrations call.
+const CORE_FUNCTIONS = readFileSync(new URL('./core-functions.sql', import.meta.url), 'utf8');
 
 const urlOf = (name: string, role?: string) => {
   const url = new URL(adminUrl);

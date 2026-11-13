@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { z } from 'zod';
-import { db } from './client.ts';
+import { db, pool } from './client.ts';
 
 /** Our own tracking table: core and other plugins in the same database keep theirs. */
 export const MIGRATIONS_TABLE = '__drizzle_migrations___id__';
@@ -69,3 +69,9 @@ export const runMigrations = async () => {
     return applied;
   });
 };
+
+// `pnpm db:migrate` applies them without starting the API.
+if (import.meta.main) {
+  await runMigrations();
+  await pool.end();
+}
