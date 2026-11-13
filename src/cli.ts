@@ -367,6 +367,8 @@ const mainCore = async (directoryArg: string | undefined, cli: CliOptions) => {
       failure = "The migration inventory failed; see the output above.";
     }
   }
+  // The plugin name moves keys that sort by name, e.g. `@<name>/api`.
+  if (installed) await run("pnpm", ["fmt"], targetDir);
 
   const cd = relative(process.cwd(), targetDir);
   p.note(

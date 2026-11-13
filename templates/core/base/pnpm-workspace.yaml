@@ -8,3 +8,9 @@ catalog:
   vite-plus: 1.6.0
 overrides:
   'vite@*': 'catalog:'
+# Install scripts nothing here needs: esbuild ships its binary as an optional
+# dependency, and the other two only print or check.
+allowBuilds:
+  core-js-pure: false
+  esbuild: false
+  protobufjs: false
