@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { derivePluginNames, validatePluginName } from "../src/naming.ts";
+import { derivePluginNames, validateCorePluginName, validatePluginName } from "../src/naming.ts";
 
 describe("validatePluginName", () => {
   it("accepts lowercase names with single dashes", () => {
@@ -22,6 +22,16 @@ describe("validatePluginName", () => {
       "sales",
     ]) {
       assert.ok(validatePluginName(name), name);
+    }
+  });
+});
+
+describe("validateCorePluginName", () => {
+  it("frees old plugin names for their port and caps the length at 40", () => {
+    assert.equal(validateCorePluginName("operation"), undefined);
+    assert.equal(validateCorePluginName("a".repeat(40)), undefined);
+    for (const name of ["a".repeat(41), "core", "my_plugin", "Sales"]) {
+      assert.ok(validateCorePluginName(name), name);
     }
   });
 });
