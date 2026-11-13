@@ -64,16 +64,16 @@ const git = async (args: string[], cwd?: string) => {
 export const erxesCacheDir = () =>
   join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "create-erxes-plugin", "erxes");
 
-/** A blobless clone of erxes/erxes main that checks out only the plugin folders. */
+/** A shallow, blobless clone of erxes/erxes main that checks out only the plugin folders. */
 export const cloneErxes = async (dir = erxesCacheDir()) => {
   if (existsSync(join(dir, ".git"))) {
-    await git(["fetch", "-q", "origin", "main"], dir);
+    await git(["fetch", "-q", "--depth=1", "origin", "main"], dir);
     await git(["checkout", "-q", "--detach", DEFAULT_REF], dir);
     return dir;
   }
 
   await mkdir(dirname(dir), { recursive: true });
-  await git(["clone", "-q", "--filter=blob:none", "--sparse", ERXES_REPO, dir]);
+  await git(["clone", "-q", "--depth=1", "--filter=blob:none", "--sparse", ERXES_REPO, dir]);
   await git(["sparse-checkout", "set", "backend/plugins", "frontend/plugins"], dir);
   return dir;
 };

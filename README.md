@@ -1,7 +1,10 @@
 # create-erxes-plugin
 
 Scaffold a standalone erxes plugin repository: an API that registers itself
-with the erxes gateway and a React Module Federation remote that core-ui loads.
+with erxes and a React Module Federation remote that core-ui loads. The first
+question picks the erxes it targets: `old erxes` (the GraphQL gateway on
+Mongo, everything below) or `new core` (erxes branch `postgre`, see
+[New core](#new-core)).
 
 ## Install
 
@@ -61,12 +64,48 @@ The CLI asks for anything not passed as a flag:
 | `--api-port <port>`        | `3399`                          |
 | `--ui-port <port>`         | `3099`                          |
 | `--no-install`, `--no-git` | install and `git init` run      |
+| `--erxes <old\|core>`      | asked; `old` with `--yes`       |
 | `-y, --yes`                | accept defaults                 |
 
 Plugin names are lowercase words separated by single dashes
 (`inventory`, `erxes-agent-v2`).
 Printed next steps target a POSIX shell on macOS/Linux and PowerShell on Windows;
 the directory command quotes the target path literally for that shell.
+
+## New core
+
+`--erxes core` writes a plugin for the new core with one fixed stack and pnpm:
+Express 5, oRPC and Drizzle on Postgres in `api/`, and an Rsbuild 2 Module
+Federation remote on React 19 with the React Compiler in `ui/`. It follows
+core's `plugin-new` skill: the API registers its manifest with
+`@erxes/plugin-sdk`, checks each request with `verifyPluginSession`, and keeps
+one example table (`<name>_items`, row-level security on `org_id`) with list,
+create and update procedures. The UI is a list page and a record side panel
+from `erxes-ui`, calling the API through `pluginFetch` with typed oRPC and
+TanStack Query. `pnpm check` (format, lint, types), `pnpm test` (Vitest on a
+real Postgres) and `pnpm build` are the gates; CI runs them and builds the image.
+
+The prompts after the plugin name ask whether this ports an old plugin:
+
+| Flag                          | Meaning                                                        |
+| ----------------------------- | -------------------------------------------------------------- |
+| `--migrate`, `--no-migrate`   | port an old plugin, or start blank (asked; blank with `--yes`) |
+| `--from <path>`               | an old erxes checkout                                          |
+| `--clone`                     | clone erxes/erxes main into `~/.cache/create-erxes-plugin/erxes` (shallow, blobless, only `backend/plugins` and `frontend/plugins`) |
+| `--plugin <name>`             | the old plugin, one of `backend/plugins/<name>_api`             |
+| `--ref <ref>`                 | the git ref to read, `origin/main` by default                  |
+
+A port gets the migration kit. After install the CLI runs
+`pnpm migrate:inventory -- --from <checkout> --plugin <name>`, which reads the
+old plugin from git objects only (GraphQL SDL, Mongoose schemas, express
+routes, UI routes, tRPC calls, event helpers, meta registrations, env vars,
+workers) into `migration/inventory.json`. Then `pnpm migrate:checklist` writes
+`MIGRATION.md` (one section per module, each core call mapped to its new-core
+equivalent or marked a gap, from `migration/core-map.ts`),
+`migration/schema-draft.ts` (prefixed draft tables) and
+`migration/import-map.ts` for `pnpm migrate:import`, which copies one
+organisation's Mongo documents into the new tables. The
+`.agents/skills/plugin-migrate` skill walks an agent through it.
 
 ## What it generates
 
@@ -124,12 +163,15 @@ forwarded `user`/tenant headers are assertions, not independent authentication.
 ```
 src/cli.ts        prompts (@clack/prompts) and flags (commander)
 src/scaffold.ts   copies template layers and fills tokens (__name__, __Pascal__, …)
+src/core-scaffold.ts   the new core target, the erxes clone and the old-plugin list
 src/generated.ts  files that depend on options: erxes.json, package.json, Dockerfile
 src/stacks.ts     backends, frontends, package managers
 templates/base    root files
 templates/api/shared   framework-neutral API files (config, gateway registration)
 templates/api/<backend>
 templates/ui/react
+templates/core/base     the new core plugin
+templates/core/migrate  the migration kit; its package.json is merged into the base one
 scripts/embed-templates.ts   embeds templates/ into src/templates.generated.ts
 scripts/compile.ts           bun --compile per-target binaries into dist/bin/
 install.sh / install.ps1     standalone-binary installers

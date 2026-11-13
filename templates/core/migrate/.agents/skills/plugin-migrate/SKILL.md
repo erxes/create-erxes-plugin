@@ -5,8 +5,10 @@ description: Port the old erxes plugin this repo was made from onto the new core
 
 `MIGRATION.md` lists everything the old plugin did, one section per module.
 `migration/inventory.json` holds the raw facts behind it, and
-`migration/core-map.ts` says what each old core call becomes. Use synthetic
-data only. The inventory reads code, never a database.
+`migration/core-map.ts` says what each old core call becomes. Core's own
+`plugin-migrate` skill (erxes repo, branch `postgre`) has the old-to-new map
+and the production cut-over. Use synthetic data only. The inventory reads
+code, never a database.
 
 1. Read `MIGRATION.md`. Port the module with the fewest unticked items first;
    `Plugin-wide` goes last.
