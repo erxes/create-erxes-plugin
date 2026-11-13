@@ -76,14 +76,18 @@ the directory command quotes the target path literally for that shell.
 
 `--erxes core` writes a plugin for the new core with one fixed stack and pnpm:
 Express 5, oRPC and Drizzle on Postgres in `api/`, and an Rsbuild 2 Module
-Federation remote on React 19 with the React Compiler in `ui/`. It follows
-core's `plugin-new` skill: the API registers its manifest with
-`@erxes/plugin-sdk`, checks each request with `verifyPluginSession`, and keeps
-one example table (`<name>_items`, row-level security on `org_id`) with list,
-create and update procedures. The UI is a list page and a record side panel
-from `erxes-ui`, calling the API through `pluginFetch` with typed oRPC and
-TanStack Query. `pnpm check` (format, lint, types), `pnpm test` (Vitest on a
-real Postgres) and `pnpm build` are the gates; CI runs them and builds the image.
+Federation remote on React 19 with the React Compiler in `ui/`, on Node 26.
+The API registers its manifest with `@erxes/plugin-sdk`, checks each request
+with `verifyPluginSession`, and keeps one reference feature for agents to copy:
+the `<name>_items` table (row-level security on `org_id`, names unique per
+organisation) with keyset-paged list, create, update and delete, and a typed
+`ITEM_NAME_TAKEN` error. The UI is a list page with optimistic delete and a
+side-panel form from `erxes-ui`, calling the API through `pluginFetch` with
+typed oRPC and TanStack Query. `AGENTS.md` carries core's quality section, and
+`.claude/skills` links to the skills in `.agents/skills`. `pnpm check` (format,
+lint, types), `pnpm test` (Vitest on a real Postgres), `pnpm check:rls` (the
+tenancy guard) and `pnpm build` are the gates; CI runs them and builds the
+image.
 
 The prompts after the plugin name ask whether this ports an old plugin:
 
