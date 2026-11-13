@@ -4,6 +4,7 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { type CoreOptions, scaffoldCore } from "../src/core-scaffold.ts";
 import { type ErxesManifest, type ProjectOptions, runtimesFor } from "../src/generated.ts";
 import { derivePluginNames } from "../src/naming.ts";
 import { scaffold } from "../src/scaffold.ts";
@@ -305,4 +306,73 @@ describe("host contract", () => {
       }
     });
   }
+});
+
+describe("new core", () => {
+  const coreOptions: CoreOptions = {
+    names: derivePluginNames("erxes-agent-v2"),
+    apiPort: 3400,
+    uiPort: 3100,
+    pnpmVersion: "10.28.1",
+  };
+  // Template tokens only; `__tests__` folders are real names.
+  const token = /__(id|Pascal|title|apiPort|uiPort|pnpmVersion|migrationSkill)__/;
+
+  it("writes a blank plugin with one identity and no migration kit", async () => {
+    const dir = join(root, "core-blank");
+    await scaffoldCore(dir, coreOptions);
+
+    for (const file of await listFiles(dir)) {
+      assert.doesNotMatch(await readFile(file, "utf8"), token, file);
+    }
+    for (const file of [".gitignore", ".dockerignore", ".env.example", ".node-version"]) {
+      assert.ok(existsSync(join(dir, file)), file);
+    }
+    assert.equal(existsSync(join(dir, "migration")), false);
+    assert.equal(existsSync(join(dir, ".agents/skills/plugin-migrate")), false);
+
+    const pkg = await readJson<PackageJson & { packageManager: string }>(join(dir, "package.json"));
+    assert.equal(pkg.packageManager, "pnpm@10.28.1");
+    assert.equal(pkg.scripts["migrate:inventory"], undefined);
+
+    const core = await readFile(join(dir, "api/src/core.ts"), "utf8");
+    assert.match(core, /remote: 'erxes_agent_v2_ui'/);
+    assert.match(
+      await readFile(join(dir, "api/src/config.ts"), "utf8"),
+      /PLUGIN = 'erxes_agent_v2'/,
+    );
+    assert.match(
+      await readFile(join(dir, "api/drizzle/0000_items.sql"), "utf8"),
+      /core_enable_tenant_rls\('erxes_agent_v2_items'\)/,
+    );
+    const federation = await readFile(join(dir, "ui/rsbuild.config.ts"), "utf8");
+    assert.ok(federation.includes("'./erxes_agent_v2': './src/ErxesAgentV2.tsx'"));
+    assert.ok(existsSync(join(dir, "ui/src/ErxesAgentV2.tsx")));
+    assert.match(await readFile(join(dir, ".env.example"), "utf8"), /PORT=3400/);
+  });
+
+  it("adds the migration kit for a port", async () => {
+    const dir = join(root, "core-migrate");
+    await scaffoldCore(dir, { ...coreOptions, migrateFrom: "operation" });
+
+    for (const file of await listFiles(dir)) {
+      assert.doesNotMatch(await readFile(file, "utf8"), token, file);
+    }
+    for (const file of [
+      "migration/inventory.ts",
+      "migration/checklist.ts",
+      "migration/core-map.ts",
+      "scripts/import-mongo.ts",
+      ".agents/skills/plugin-migrate/SKILL.md",
+    ]) {
+      assert.ok(existsSync(join(dir, file)), file);
+    }
+    const pkg = await readJson<PackageJson & { name: string }>(join(dir, "package.json"));
+    assert.equal(pkg.name, "@erxes_agent_v2/plugin");
+    assert.equal(pkg.scripts.check?.includes("vp check"), true);
+    assert.equal(pkg.scripts["migrate:inventory"], "node migration/inventory.ts");
+    assert.ok(pkg.devDependencies["@ast-grep/napi"]);
+    assert.ok(pkg.devDependencies["vite-plus"]);
+    assert.match(await readFile(join(dir, "AGENTS.md"), "utf8"), /old erxes `operation` plugin/);
+  });
 });

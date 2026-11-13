@@ -23,18 +23,24 @@ export type PluginNames = {
   cssPrefix: string;
 };
 
-export const validatePluginName = (name: string): string | undefined => {
+const validateShape = (name: string) => {
   if (!NAME_PATTERN.test(name)) {
     return "Use lowercase letters and digits, optionally separated by single dashes (e.g. inventory, erxes-agent-v2), starting with a letter.";
   }
   if (RESERVED_NAMES.has(name)) {
     return `"${name}" is reserved by erxes.`;
   }
-  if (EXISTING_PLUGIN_PATTERN.test(name)) {
-    return `"${name}" is already an erxes plugin.`;
-  }
   return undefined;
 };
+
+export const validatePluginName = (name: string): string | undefined =>
+  validateShape(name) ??
+  (EXISTING_PLUGIN_PATTERN.test(name) ? `"${name}" is already an erxes plugin.` : undefined);
+
+// The new core keeps its own plugin registry, so an old plugin's name is free
+// for its port. Core allows up to 40 characters.
+export const validateCorePluginName = (name: string): string | undefined =>
+  validateShape(name) ?? (name.length > 40 ? "Use at most 40 characters." : undefined);
 
 const capitalize = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
 
