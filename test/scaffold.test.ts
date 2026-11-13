@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, readlink, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -328,6 +328,11 @@ describe("new core", () => {
     for (const file of [".gitignore", ".dockerignore", ".env.example", ".node-version"]) {
       assert.ok(existsSync(join(dir, file)), file);
     }
+    assert.equal(await readlink(join(dir, ".claude/skills")), join("..", ".agents", "skills"));
+    assert.ok(
+      existsSync(join(dir, ".claude/skills/endpoint/SKILL.md")),
+      "Claude Code sees the skills",
+    );
     assert.equal(existsSync(join(dir, "migration")), false);
     assert.equal(existsSync(join(dir, ".agents/skills/plugin-migrate")), false);
 
