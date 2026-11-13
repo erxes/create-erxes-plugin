@@ -357,13 +357,23 @@ const mainCore = async (directoryArg: string | undefined, cli: CliOptions) => {
   }
   if (migration && installed) {
     spin.start(`Reading ${migration.plugin} at ${migration.ref}`);
-    const inventory = await run("pnpm", ["migrate:inventory", "--", ...inventoryArgs], targetDir);
-    const checklist = inventory.ok && (await run("pnpm", ["migrate:checklist"], targetDir));
-    inventoried = Boolean(checklist && checklist.ok);
-    if (checklist && checklist.ok) spin.stop(checklist.output.split("\n").at(-1) ?? "MIGRATION.md");
+    const inventory = await run(
+      "pnpm",
+      ["-s", "migrate:inventory", "--", ...inventoryArgs],
+      targetDir,
+    );
+    const result = inventory.ok
+      ? await run("pnpm", ["-s", "migrate:checklist"], targetDir)
+      : inventory;
+    inventoried = result.ok;
+    if (result.ok)
+      spin.stop(
+        result.output.split("\n").find((line) => line.startsWith("MIGRATION.md")) ??
+          "Wrote MIGRATION.md",
+      );
     else {
       spin.error("The migration inventory failed");
-      p.log.message((checklist || inventory).output);
+      p.log.message(result.output);
       failure = "The migration inventory failed; see the output above.";
     }
   }
