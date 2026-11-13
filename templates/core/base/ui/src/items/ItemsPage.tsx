@@ -15,6 +15,9 @@ const NameCell = ({ item }: { item: Item }) => {
   );
 };
 
+/** Where RecordTable keeps this list's column settings. */
+const TABLE_ID = '__id___items';
+
 const DeleteCell = ({ item }: { item: Item }) => {
   const { t } = useTranslation('__id__');
   const remove = useRemoveItem();
@@ -82,7 +85,7 @@ export const ItemsPage = () => {
       {error ? (
         <p className="m-3 text-sm text-destructive">{error.message}</p>
       ) : (
-        <RecordTable.Provider columns={columns} data={list} className="m-3" tableId="__id___items">
+        <RecordTable.Provider columns={columns} data={list} className="m-3" tableId={TABLE_ID}>
           <RecordTable.CursorProvider dataLength={list.length} hasNextPage={hasNextPage}>
             <RecordTable>
               <RecordTable.Header />
