@@ -39,6 +39,10 @@ export const scaffoldCore = async (targetDir: string, options: CoreOptions) => {
     ],
   ];
   await copyLayer("core/base", targetDir, tokens);
+  // `@__id__/api` takes its place in the sorted list only once it has the plugin's name.
+  const uiPackageJson = join(targetDir, "ui/package.json");
+  const ui = await readJson<PackageJson>(uiPackageJson);
+  await writeJson(uiPackageJson, { ...ui, devDependencies: sortKeys(ui.devDependencies ?? {}) });
   if (!migrateFrom) return;
 
   // The migrate layer's package.json holds only the scripts and dev

@@ -6,6 +6,10 @@ injectWorkspacePackages: true
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.6.0
   vite-plus: 1.6.0
+# Core publishes its packages under the v2-next tag, often more than once a day;
+# the release-age gate stays on for everything else.
+minimumReleaseAgeExclude:
+  - '@erxes/*'
 overrides:
   'vite@*': 'catalog:'
 # Install scripts nothing here needs: esbuild ships its binary as an optional

@@ -73,7 +73,13 @@ const workerApis = new Set([
  * them to a default role and are not new actions.
  */
 const REGISTRATIONS = [
-  { kind: 'permission', file: /\/meta\/permissions/, key: 'actions', id: ['name'], objectsOnly: true },
+  {
+    kind: 'permission',
+    file: /\/meta\/permissions/,
+    key: 'actions',
+    id: ['name'],
+    objectsOnly: true,
+  },
   { kind: 'default role', file: /\/meta\/permissions/, key: 'defaultGroups', id: ['id', 'name'] },
   { kind: 'notification', file: /\/meta\/notifications/, key: 'events', id: ['name'] },
   { kind: 'automation trigger', file: /automation/i, key: 'triggers', id: ['type', 'label'] },
