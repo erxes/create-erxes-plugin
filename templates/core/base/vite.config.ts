@@ -15,6 +15,11 @@ const restrictedImports = {
       ],
       message: 'Use erxes-ui through its public exports; data goes through oRPC (ui/src/orpc.ts).',
     },
+    {
+      group: ['@erxes/core-db', '@erxes/core-db/*'],
+      message:
+        "Core's tables are core's. Reach core through @erxes/plugin-sdk (api/src/core.ts); the plugin's own tables are in api/src/db.",
+    },
   ],
 };
 
