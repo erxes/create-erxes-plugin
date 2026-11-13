@@ -45,11 +45,12 @@ export const ItemSheet = ({ items }: { items: Item[] }) => {
       <Sheet.View className="sm:max-w-md">
         <Sheet.Header>
           <Sheet.Title>{item ? item.name : t('new-item', 'New item')}</Sheet.Title>
-          <Sheet.Description>
+          <Sheet.Description className="sr-only">
             {item
               ? t('edit-item-hint', 'Change the name or the description.')
               : t('new-item-hint', 'Give it a name. The description is optional.')}
           </Sheet.Description>
+          <Sheet.Close />
         </Sheet.Header>
         {openId === 'new' || item ? (
           <form key={item?.id ?? 'new'} action={save} className="flex flex-1 flex-col">
