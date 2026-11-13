@@ -43,7 +43,8 @@ export default defineConfig({
     ignorePatterns: ['**/node_modules/**', '**/dist/**', 'coverage/**'],
     rules: {
       'vite-plus/prefer-vite-plus-imports': 'error',
-      'no-unused-vars': 'error',
+      // `const { orgId, ...columns } = ...` drops a field on purpose.
+      'no-unused-vars': ['error', { ignoreRestSiblings: true }],
       'no-restricted-imports': ['error', restrictedImports],
       'import/no-default-export': 'error',
       'import/no-cycle': 'error',

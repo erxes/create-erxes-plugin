@@ -13,7 +13,8 @@ jobs:
       matrix:
         # Every backend builds React too. Additional package managers are
         # exercised on the default platform stack rather than a 6x4 matrix.
-        case: [platform-pnpm, platform-npm, platform-yarn, express-pnpm, fastify-pnpm, hono-pnpm, nestjs-pnpm, elysia-bun]
+        # core-pnpm is a new-core plugin running its own gates on Node 26.
+        case: [platform-pnpm, platform-npm, platform-yarn, express-pnpm, fastify-pnpm, hono-pnpm, nestjs-pnpm, elysia-bun, core-pnpm]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -21,14 +22,21 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.case == 'core-pnpm' && 26 || 22 }}
           cache: pnpm
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.x"
       - run: corepack enable yarn && corepack prepare yarn@4.18.1 --activate
+      - name: Postgres for the new-core plugin's tests
+        if: matrix.case == 'core-pnpm'
+        run: |
+          docker run -d -p 127.0.0.1:5432:5432 -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci-only-password \
+            -e POSTGRES_DB=postgres --health-cmd 'pg_isready -U ci' --health-interval 2s postgres:18
+          until [ "$(docker inspect -f '{{.State.Health.Status}}' "$(docker ps -lq)")" = healthy ]; do sleep 1; done
       - run: pnpm install --frozen-lockfile
       - name: Test packed CLI in a fresh external directory
         run: pnpm test:e2e
         env:
           E2E_CASE: ${{ matrix.case }}
+          DATA_TEST_URL: ${{ matrix.case == 'core-pnpm' && 'postgres://ci:ci-only-password@127.0.0.1:5432/postgres' || '' }}
