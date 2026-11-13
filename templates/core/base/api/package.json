@@ -12,7 +12,7 @@
   },
   "exports": "./src/router.ts",
   "scripts": {
-    "dev": "node --env-file-if-exists=../.env --import ./src/telemetry.ts --watch src/main.ts",
+    "dev": "node --env-file-if-exists=../.env --import ./src/telemetry.ts --watch-path=src src/main.ts",
     "build": "vp pack src/main.ts src/telemetry.ts --format esm --sourcemap --no-dts",
     "start": "node --enable-source-maps --import ./dist/telemetry.mjs dist/main.mjs",
     "db:generate": "drizzle-kit generate",
