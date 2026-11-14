@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, symlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { x } from "tinyexec";
@@ -21,6 +21,22 @@ export type CoreOptions = {
   migrateFrom?: string;
 };
 
+/**
+ * Claude Code loads skills from `.claude/skills`; the repo keeps them in
+ * `.agents/skills`, so the first links to the second. Git commits the link.
+ */
+const linkSkills = async (targetDir: string) => {
+  const link = join(targetDir, ".claude", "skills");
+  await mkdir(dirname(link), { recursive: true });
+  try {
+    await symlink(join("..", ".agents", "skills"), link, "dir");
+  } catch (error) {
+    // Windows without Developer Mode refuses symlinks; a junction needs no rights.
+    if (process.platform !== "win32") throw error;
+    await symlink(join(targetDir, ".agents", "skills"), link, "junction");
+  }
+};
+
 export const scaffoldCore = async (targetDir: string, options: CoreOptions) => {
   const { names, migrateFrom } = options;
   const tokens: [string, string][] = [
@@ -39,6 +55,11 @@ export const scaffoldCore = async (targetDir: string, options: CoreOptions) => {
     ],
   ];
   await copyLayer("core/base", targetDir, tokens);
+  // `@__id__/api` takes its place in the sorted list only once it has the plugin's name.
+  const uiPackageJson = join(targetDir, "ui/package.json");
+  const ui = await readJson<PackageJson>(uiPackageJson);
+  await writeJson(uiPackageJson, { ...ui, devDependencies: sortKeys(ui.devDependencies ?? {}) });
+  await linkSkills(targetDir);
   if (!migrateFrom) return;
 
   // The migrate layer's package.json holds only the scripts and dev

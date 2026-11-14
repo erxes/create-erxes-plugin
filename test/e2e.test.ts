@@ -27,7 +27,11 @@ const cases: [Backend, PackageManager][] = [
 ].filter(
   ([backend, pm]) => !process.env.E2E_CASE || process.env.E2E_CASE === `${backend}-${pm}`,
 ) as [Backend, PackageManager][];
-if (enabled && cases.length === 0) throw new Error(`Unknown E2E_CASE: ${process.env.E2E_CASE}`);
+// A new-core plugin (--erxes core) runs its own gates, which need Postgres.
+const coreCase = !process.env.E2E_CASE || process.env.E2E_CASE === "core-pnpm";
+if (enabled && cases.length === 0 && !coreCase) {
+  throw new Error(`Unknown E2E_CASE: ${process.env.E2E_CASE}`);
+}
 
 const run = async (command: string, args: string[], cwd: string) => {
   const result = await x(command, args, {
@@ -138,6 +142,22 @@ describe("generated projects install, type-check and build", { skip: !enabled },
   });
   after(async () => {
     await rm(root, { recursive: true, force: true });
+  });
+
+  it("new core with pnpm", { skip: !coreCase, timeout: 15 * 60_000 }, async () => {
+    assert.ok(
+      process.env.DATA_TEST_URL,
+      "the core case runs the plugin's tests: set DATA_TEST_URL",
+    );
+    const dir = join(root, "core-pnpm");
+    const flags = ["--erxes", "core", "--no-migrate", "--no-install", "--no-git", "--yes"];
+    await run(process.execPath, [cli, dir, "--name", "inventory-tools", ...flags], root);
+    assert.ok(existsSync(join(dir, ".claude/skills/endpoint/SKILL.md")), "Claude Code skills");
+    // The plugin's own gates, as its CI runs them.
+    for (const script of ["install", "check", "test", "check:rls", "build"]) {
+      await run("pnpm", [script], dir);
+    }
+    assert.ok(existsSync(join(dir, "ui/dist/remoteEntry.js")), "browser remote entry");
   });
 
   for (const [backend, pm] of cases) {

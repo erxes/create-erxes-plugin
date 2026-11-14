@@ -1,6 +1,6 @@
 # Packages what `pnpm image:context` built on the host: the bundled API with
 # its production node_modules (.runtime) and the UI remote, served at /ui.
-FROM node:24-bookworm-slim
+FROM node:26-bookworm-slim
 ARG VERSION=0.1.0
 WORKDIR /app
 COPY --chown=node:node .runtime/ ./

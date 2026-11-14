@@ -7,8 +7,8 @@ description: Add or change an API procedure. Use when editing api/src/modules, a
    there and into `manifest.permissions`, named `__id__.<record>.<verb>`.
 2. Write the procedure in `api/src/modules/<module>/<module>.ts` on `reads(action)`
    or `writes(action)` from `api/src/orpc.ts`, with a zod `.input()`. Query
-   through `context.tx` and filter on `context.member.orgId`. Lists page by
-   cursor, newest first, as `items.list` does.
+   through `context.tx` with no org filter: row-level security scopes it.
+   Lists page by cursor, newest first, as `items.list` does.
 3. Fail with `ORPCError` (`NOT_FOUND`, `FORBIDDEN`, `CONFLICT`, `BAD_REQUEST`);
    the UI shows its `message`.
 4. Add the module to `router` in `api/src/router.ts`. The UI's types follow.
