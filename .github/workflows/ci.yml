@@ -34,8 +34,11 @@ jobs:
     needs: [deliverables, check]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # npm trusted publishing: npm trusts this workflow through GitHub's OIDC token,
+    # so there is no npm token to store or rotate, and npm adds provenance.
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -45,15 +48,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
       - name: Publish this version when npm does not have it
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH }}
         run: |
           set -euo pipefail
           name=$(node -p "require('./package.json').name")
